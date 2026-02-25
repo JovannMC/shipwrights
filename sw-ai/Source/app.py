@@ -341,7 +341,7 @@ def get_vibes():
                 "messages": [
                     {
                         "role": "user",
-                        "content": helpers.format_vibes_message(db.get_recent_tickets())
+                        "content": helpers.format_vibes_message(db.get_recent_tickets(), db.get_context_tickets())
                     }
                 ]
             },

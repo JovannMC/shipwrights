@@ -1,6 +1,6 @@
 import schedule, time, requests, json
 import helpers
-from db import save_metrics_history, get_recent_tickets
+from db import save_metrics_history, get_recent_tickets, get_context_tickets
 from datetime import datetime
 
 AI_MODEL = "google/gemini-3-flash-preview"
@@ -24,7 +24,7 @@ def save_metrics():
                 "messages": [
                     {
                         "role": "user",
-                        "content": helpers.format_vibes_message(get_recent_tickets())
+                        "content": helpers.format_vibes_message(get_recent_tickets(), get_context_tickets())
                     }
                 ]
             },

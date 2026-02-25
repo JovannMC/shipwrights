@@ -395,10 +395,16 @@ def check_type(data: dict) -> dict:
     return {"type": "Unknown", "debug": {"input": input_data, "request": req_body, "response": None, "error": "max retries"}}
 
 
-def format_vibes_message(tickets):
+def format_vibes_message(tickets, old_tickets):
     ticket_data = ""
+    old_ticket_data = ""
+
     for ticket in tickets:
         ticket_data += f"#{ticket['id']}: {ticket['question']}\n{ticket['messages']}\n\n"
+
+    for ticket in old_tickets:
+        old_ticket_data += f"#{ticket['id']}: {ticket['question']}\n{ticket['messages']}\n\n"
+
     return f"""Analyze these support tickets for the Shipwrights team.
 
 ## Tasks
@@ -410,9 +416,17 @@ def format_vibes_message(tickets):
 - Only reference staff messages prefixed with '?' (these were sent to the user). Messages without '?' are internal discussions and should NOT be mentioned.
 - Do NOT provide recommendations about delays or response times. We are a volunteer team.
 - The quote must be from a USER, not from staff.
+- You must always return in the specified JSON format as this is parsed never returning in markdown.
+- Sentiment values are important to us we see as 1 being perfect and 0 being horrible please weigh against the context tickets to decide how good/bad we performed that day in comparison
+- Please give detailed reasons for the day being good/bad as we try to use this to improve.
+- For the quotes and suggestion please do not use old context tickets for them only new tickets.
+
+
+## Old Tickets for context
+{old_ticket_data}
 
 ## Tickets
 {ticket_data}
 
 ## JSON Response (no markdown)
-{{"positive": {{"result": true, "reason": "short", "sentiment": "number from 0 to 1"}}, "quotes": [{{"ticket_id": "123", "text": "quote", "reason": "short"}}], "suggestion": {{"action": "what", "reason": "short"}}}}"""""
+{{"positive": {{"result": true, "reason": "short but detailed", "sentiment": "number from 0 to 1"}}, "quotes": [{{"ticket_id": "123", "text": "quote", "reason": "short but detailed"}}], "suggestion": {{"action": "what", "reason": "short but detailed referencing the ticket this originates from."}}}}"""""

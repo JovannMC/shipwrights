@@ -96,6 +96,39 @@ def get_recent_tickets():
         cursor.close()
         conn.close()
 
+def get_context_tickets():
+    conn = db_pool.get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT id, question FROM tickets
+            WHERE createdAt < NOW() - INTERVAL 24 HOUR and createdAt >= NOW() - INTERVAL 96 HOUR
+        """)
+        tickets = cursor.fetchall()
+        result = []
+        for ticket in tickets:
+            cursor.execute(
+                """
+                SELECT msg, isStaff
+                FROM ticket_msgs
+                WHERE ticketId = %s
+                ORDER BY createdAt ASC
+                """,
+                (ticket['id'],)
+            )
+            messages = cursor.fetchall()
+
+            result.append({
+                'id': ticket['id'],
+                'question': ticket['question'],
+                'messages': format_messages(messages, False)
+            })
+
+        return result
+    finally:
+        cursor.close()
+        conn.close()
+
 
 def save_metrics_history(data, created_at=None):
     conn = db_pool.get_connection()
