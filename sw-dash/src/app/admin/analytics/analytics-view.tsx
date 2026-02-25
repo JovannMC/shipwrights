@@ -94,7 +94,6 @@ export function AnalyticsView() {
                 dataKey="value"
                 xKey="date"
                 yLabel="Hours"
-                xLabel="Date"
                 valueLabel="Avg Wait (hrs)"
               />
             </div>
@@ -112,7 +111,6 @@ export function AnalyticsView() {
                   dataKey="value"
                   xKey="date"
                   yLabel="Count"
-                  xLabel="Date"
                   valueLabel="Decisions"
                 />
               </div>
@@ -129,7 +127,6 @@ export function AnalyticsView() {
                   dataKey="value"
                   xKey="date"
                   yLabel="Percent"
-                  xLabel="Date"
                   valueLabel="Rate"
                 />
               </div>
@@ -186,7 +183,6 @@ export function AnalyticsView() {
                 dataKey="value"
                 xKey="date"
                 yLabel="Reviews"
-                xLabel="Date"
                 valueLabel="Done"
                 color="#22d3ee"
               />
@@ -233,7 +229,6 @@ export function AnalyticsView() {
               dataKey="value"
               xKey="date"
               yLabel="Tickets"
-              xLabel="Date"
               valueLabel="Created"
               color="#c084fc"
             />
