@@ -6,6 +6,59 @@ import Image from 'next/image'
 import { can, PERMS } from '@/lib/perms'
 import { useShipCert } from '@/hooks/useShipCert'
 import { AiSummary } from './ai-summary'
+import { SubmitterCard } from '@/components/submitter-card'
+
+function HistoryCard({ h }: { h: any }) {
+  const verdictCls =
+    h.verdict === 'approved'
+      ? 'bg-green-900/30 text-green-400'
+      : h.verdict === 'rejected'
+        ? 'bg-red-900/30 text-red-400'
+        : 'bg-yellow-900/30 text-yellow-400'
+
+  return (
+    <Link
+      href={`/admin/ship_certifications/${h.id}/edit`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`block border-2 rounded-2xl p-3 transition-colors ${
+        h.isCurrent
+          ? 'bg-amber-950/30 border-amber-600/60 hover:border-amber-500'
+          : 'bg-zinc-950/50 border-amber-900/30 hover:border-amber-700/50'
+      }`}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          {h.returned ? (
+            <span className="bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded font-mono text-xs">
+              RETURNED
+            </span>
+          ) : (
+            <span className={`px-2 py-0.5 rounded font-mono text-xs ${verdictCls}`}>
+              {h.verdict}
+            </span>
+          )}
+          <span className="text-gray-500 font-mono text-xs">#{h.id}</span>
+          {h.isCurrent && (
+            <span className="text-amber-400 font-mono text-xs">← you&apos;re here</span>
+          )}
+        </div>
+        <span className="text-gray-500 font-mono text-xs">
+          {h.completedAt ? new Date(h.completedAt).toLocaleDateString() : '-'}
+        </span>
+      </div>
+      <div className="text-white font-mono text-xs mb-1">
+        {h.returned ? `returned by ${h.returnedBy || 'unknown'}` : `by ${h.certifier}`}
+      </div>
+      {h.returned && h.returnReason && (
+        <div className="text-purple-300/80 font-mono text-xs mb-1">{h.returnReason}</div>
+      )}
+      {h.feedback && (
+        <div className="text-gray-400 font-mono text-xs whitespace-pre-wrap">{h.feedback}</div>
+      )}
+    </Link>
+  )
+}
 
 interface Props {
   shipId: string
@@ -65,6 +118,7 @@ export function Form({ shipId }: Props) {
 
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   useEffect(() => {
     if (!cert?.claimedAt) {
@@ -138,7 +192,7 @@ export function Form({ shipId }: Props) {
           ← back
         </Link>
 
-        <div className="flex items-start justify-between gap-4 mb-4 md:mb-8">
+        <div className="flex items-start justify-between gap-4 mb-4">
           <div className="min-w-0">
             <h1 className="text-2xl md:text-4xl font-mono text-amber-400 mb-1 md:mb-2">
               Edit Cert
@@ -147,14 +201,19 @@ export function Form({ shipId }: Props) {
               {cert.project}
             </h2>
           </div>
-          {canReport && cert.ftId && (
-            <button
-              onClick={() => setShowReport(true)}
-              className="shrink-0 bg-red-950/30 text-red-400 border-2 border-red-700/60 hover:bg-red-900/40 px-4 py-2 rounded-2xl font-mono text-sm transition-all"
-            >
-              🚩 Report to Fraud Squad!
-            </button>
-          )}
+          <div className="flex items-start gap-3 shrink-0">
+            {cert.submitter.slackId && (
+              <SubmitterCard slackId={cert.submitter.slackId} username={cert.submitter.username} />
+            )}
+            {canReport && cert.ftId && (
+              <button
+                onClick={() => setShowReport(true)}
+                className="shrink-0 bg-red-950/30 text-red-400 border-2 border-red-700/60 hover:bg-red-900/40 px-4 py-2 rounded-2xl font-mono text-sm transition-all"
+              >
+                🚩 Report to Fraud Squad!
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
@@ -621,69 +680,67 @@ export function Form({ shipId }: Props) {
 
             {cert.history && cert.history.length > 0 && (
               <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl shadow-amber-950/20">
-                <h3 className="text-amber-400 font-mono text-sm font-bold mb-3 md:mb-4">
-                  Cert history
-                </h3>
+                <div className="flex items-center justify-between mb-3 md:mb-4">
+                  <h3 className="text-amber-400 font-mono text-sm font-bold">Cert history</h3>
+                  <button
+                    onClick={() => setHistoryOpen(true)}
+                    title="expand"
+                    className="text-gray-500 hover:text-amber-400 transition-colors p-1 rounded-lg hover:bg-amber-900/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="15 3 21 3 21 9" />
+                      <polyline points="9 21 3 21 3 15" />
+                      <line x1="21" y1="3" x2="14" y2="10" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
+                  </button>
+                </div>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {cert.history.map((h, i) => (
-                    <Link
-                      key={i}
-                      href={`/admin/ship_certifications/${h.id}/edit`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`block border-2 rounded-2xl p-3 transition-colors ${
-                        h.isCurrent
-                          ? 'bg-amber-950/30 border-amber-600/60 hover:border-amber-500'
-                          : 'bg-zinc-950/50 border-amber-900/30 hover:border-amber-700/50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {h.returned ? (
-                            <span className="bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded font-mono text-xs">
-                              RETURNED
-                            </span>
-                          ) : (
-                            <span
-                              className={`px-2 py-0.5 rounded font-mono text-xs ${
-                                h.verdict === 'approved'
-                                  ? 'bg-green-900/30 text-green-400'
-                                  : h.verdict === 'rejected'
-                                    ? 'bg-red-900/30 text-red-400'
-                                    : 'bg-yellow-900/30 text-yellow-400'
-                              }`}
-                            >
-                              {h.verdict}
-                            </span>
-                          )}
-                          <span className="text-gray-500 font-mono text-xs">#{h.id}</span>
-                          {h.isCurrent && (
-                            <span className="text-amber-400 font-mono text-xs">
-                              ← you&apos;re here
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-gray-500 font-mono text-xs">
-                          {h.completedAt ? new Date(h.completedAt).toLocaleDateString() : '-'}
-                        </span>
-                      </div>
-                      <div className="text-white font-mono text-xs mb-1">
-                        {h.returned
-                          ? `returned by ${h.returnedBy || 'unknown'}`
-                          : `by ${h.certifier}`}
-                      </div>
-                      {h.returned && h.returnReason && (
-                        <div className="text-purple-300/80 font-mono text-xs mb-1 line-clamp-1">
-                          {h.returnReason}
-                        </div>
-                      )}
-                      {h.feedback && (
-                        <div className="text-gray-400 font-mono text-xs line-clamp-2">
-                          {h.feedback}
-                        </div>
-                      )}
-                    </Link>
+                    <HistoryCard key={i} h={h} />
                   ))}
+                </div>
+              </div>
+            )}
+
+            {historyOpen && cert.history && (
+              <div
+                className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4"
+                onClick={() => setHistoryOpen(false)}
+              >
+                <div
+                  className="bg-gradient-to-br from-zinc-900 to-black border-4 border-amber-900/50 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between p-5 border-b border-amber-900/30">
+                    <div>
+                      <h2 className="text-amber-400 font-mono text-lg font-bold">Cert history</h2>
+                      <p className="text-gray-500 font-mono text-xs mt-0.5">
+                        {cert.project} — {cert.history.length} entries
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setHistoryOpen(false)}
+                      className="text-gray-400 hover:text-white transition-colors text-xl font-mono"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="overflow-y-auto flex-1 p-5 space-y-3">
+                    {cert.history.map((h, i) => (
+                      <HistoryCard key={i} h={h} />
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

@@ -26,6 +26,7 @@ export default async function Ysws() {
             reviews: data.reviews,
             stats: data.stats,
             leaderboard: data.leaderboard,
+            reviewers: data.reviewers,
           }}
         />
       </div>

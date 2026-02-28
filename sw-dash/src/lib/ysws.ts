@@ -45,20 +45,41 @@ interface Filters {
   sortBy?: string
   lbMode?: string
   hours?: number | null
+  ftId?: string | null
+  shipCertId?: number | null
+  includeReviewers?: string[]
+  excludeReviewers?: string[]
+  from?: string | null
+  to?: string | null
 }
 
 async function fetchYsws(filters: Filters = {}) {
   const { status, sortBy = 'newest' } = filters
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
   const now = new Date()
 
-  const where: { status?: string; updatedAt?: { gte: Date } } = {}
+  const where: Record<string, unknown> = {}
   if (status && status !== 'all') where.status = status
   if (filters.hours) {
     where.updatedAt = { gte: new Date(Date.now() - filters.hours * 60 * 60 * 1000) }
   }
+  if (filters.from || filters.to) {
+    where.createdAt = {
+      ...(filters.from ? { gte: new Date(filters.from) } : {}),
+      ...(filters.to ? { lte: new Date(filters.to + 'T23:59:59Z') } : {}),
+    }
+  }
+  if (filters.shipCertId) where.shipCertId = filters.shipCertId
+
+  const shipCertWhere: Record<string, unknown> = {}
+  if (filters.ftId) shipCertWhere.ftProjectId = { contains: filters.ftId }
+  if (filters.includeReviewers?.length) {
+    shipCertWhere.reviewer = { username: { in: filters.includeReviewers } }
+  } else if (filters.excludeReviewers?.length) {
+    shipCertWhere.reviewer = { username: { notIn: filters.excludeReviewers } }
+  }
+
+  if (Object.keys(shipCertWhere).length) where.shipCert = shipCertWhere
 
   const orderBy = { createdAt: sortBy === 'oldest' ? 'asc' : 'desc' } as const
 
@@ -184,7 +205,16 @@ async function fetchYsws(filters: Filters = {}) {
   })
 
   if (sortBy === 'devlogs') mapped.sort((a, b) => b.devlogCount - a.devlogCount)
+  if (sortBy === 'devlogs_asc') mapped.sort((a, b) => a.devlogCount - b.devlogCount)
   if (sortBy === 'time') mapped.sort((a, b) => b.totalTime - a.totalTime)
+  if (sortBy === 'time_asc') mapped.sort((a, b) => a.totalTime - b.totalTime)
+
+  const certifiers = await prisma.user.findMany({
+    where: { shipCerts: { some: { yswsReviews: { some: {} } } } },
+    select: { username: true },
+    orderBy: { username: 'asc' },
+  })
+  const reviewers = certifiers.map((u) => u.username)
 
   return {
     reviews: mapped,
@@ -200,6 +230,7 @@ async function fetchYsws(filters: Filters = {}) {
       avgHangHrs,
     },
     leaderboard,
+    reviewers,
   }
 }
 
@@ -209,6 +240,12 @@ export async function getYsws(filters: Filters = {}) {
     sortBy: filters.sortBy || 'newest',
     lbMode: filters.lbMode || 'weekly',
     hours: filters.hours?.toString() || null,
+    ftId: filters.ftId || null,
+    shipCertId: filters.shipCertId?.toString() || null,
+    include: filters.includeReviewers?.join(',') || null,
+    exclude: filters.excludeReviewers?.join(',') || null,
+    from: filters.from || null,
+    to: filters.to || null,
   })
   return cache(key, 300, () => fetchYsws(filters))
 }

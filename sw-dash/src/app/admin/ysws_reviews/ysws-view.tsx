@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -41,9 +41,6 @@ interface DevlogReviewer {
   username: string
   avatar: string | null
   devlogCount: number
-  approvedCount: number
-  rejectedCount: number
-  reviewCount: number
 }
 
 interface Props {
@@ -51,6 +48,7 @@ interface Props {
     reviews: Review[]
     stats: Stats
     leaderboard: Reviewer[]
+    reviewers: string[]
   }
 }
 
@@ -73,13 +71,155 @@ const fmtTime = (secs: number) => {
   return `${hrs}h ${mins}m`
 }
 
+function useClickOutside(ref: React.RefObject<HTMLElement | null>, cb: () => void) {
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) cb()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+}
+
+function Dropdown({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: { val: string; label: string }[]
+  onChange: (v: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useClickOutside(ref, () => setOpen(false))
+
+  const cur = options.find((o) => o.val === value)
+
+  return (
+    <div className="space-y-1">
+      <label className="text-amber-400 font-mono text-xs">{label}</label>
+      <div ref={ref} className="relative">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="w-full flex items-center justify-between bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-amber-600 hover:border-zinc-500 transition-colors"
+        >
+          <span>{cur?.label || value}</span>
+          <span className="text-gray-400 ml-2">{open ? '▲' : '▼'}</span>
+        </button>
+        {open && (
+          <div className="absolute z-50 top-full mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden shadow-2xl">
+            {options.map((o) => (
+              <button
+                key={o.val}
+                onClick={() => {
+                  onChange(o.val)
+                  setOpen(false)
+                }}
+                className={`w-full text-left px-3 py-2 font-mono text-xs transition-colors ${o.val === value ? 'bg-amber-900/50 text-amber-300' : 'text-gray-300 hover:bg-zinc-800'}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MultiDropdown({
+  label,
+  selected,
+  options,
+  onChange,
+}: {
+  label: string
+  selected: string[]
+  options: string[]
+  onChange: (v: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  useClickOutside(ref, () => {
+    setOpen(false)
+    setQuery('')
+  })
+
+  const toggle = (name: string) =>
+    onChange(selected.includes(name) ? selected.filter((x) => x !== name) : [...selected, name])
+
+  const filtered = query
+    ? options.filter((o) => o.toLowerCase().includes(query.toLowerCase()))
+    : options
+  const display =
+    selected.length === 0
+      ? 'All'
+      : selected.length === 1
+        ? selected[0]
+        : `${selected.length} selected`
+
+  return (
+    <div className="space-y-1">
+      <label className="text-amber-400 font-mono text-xs">{label}</label>
+      <div ref={ref} className="relative">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="w-full flex items-center justify-between bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-amber-600 hover:border-zinc-500 transition-colors"
+        >
+          <span className={selected.length ? 'text-amber-300' : 'text-gray-400'}>{display}</span>
+          <span className="text-gray-400 ml-2">{open ? '▲' : '▼'}</span>
+        </button>
+        {open && (
+          <div className="absolute z-50 top-full mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden shadow-2xl">
+            <div className="p-1.5 border-b border-zinc-700">
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="type to filter..."
+                className="w-full bg-zinc-800 rounded-lg px-2 py-1.5 font-mono text-xs text-white placeholder-gray-600 focus:outline-none"
+              />
+            </div>
+            <div className="max-h-[160px] overflow-y-auto">
+              {filtered.map((name) => (
+                <button
+                  key={name}
+                  onClick={() => toggle(name)}
+                  className={`w-full text-left px-3 py-2 font-mono text-xs transition-colors flex items-center gap-2 ${selected.includes(name) ? 'bg-amber-900/50 text-amber-300' : 'text-gray-300 hover:bg-zinc-800'}`}
+                >
+                  <span
+                    className={`w-3 h-3 border rounded flex-shrink-0 flex items-center justify-center text-[8px] ${selected.includes(name) ? 'border-amber-500 bg-amber-900/50 text-amber-300' : 'border-zinc-600'}`}
+                  >
+                    {selected.includes(name) ? '✓' : ''}
+                  </span>
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function YswsView({ initial }: Props) {
   const params = useSearchParams()
   const [status, setStatus] = useState('pending')
   const [sortBy, setSortBy] = useState('newest')
+  const [search, setSearch] = useState('')
+  const [includeReviewers, setIncludeReviewers] = useState<string[]>([])
+  const [excludeReviewers, setExcludeReviewers] = useState<string[]>([])
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [reviews, setReviews] = useState(initial.reviews)
   const [stats, setStats] = useState(initial.stats)
   const [leaderboard, setLeaderboard] = useState(initial.leaderboard)
+  const [allReviewers, setAllReviewers] = useState<string[]>(initial.reviewers || [])
   const [devlogLeaderboard, setDevlogLeaderboard] = useState<DevlogReviewer[]>([])
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -99,27 +239,32 @@ export function YswsView({ initial }: Props) {
       if (status !== 'all') p.set('status', status)
       p.set('sortBy', sortBy)
       p.set('lbMode', lbMode)
+      if (search) p.set('ftId', search)
+      if (includeReviewers.length) p.set('includeReviewers', includeReviewers.join(','))
+      if (excludeReviewers.length) p.set('excludeReviewers', excludeReviewers.join(','))
+      if (from) p.set('from', from)
+      if (to) p.set('to', to)
       const res = await fetch(`/api/admin/ysws_reviews?${p}`)
       if (!res.ok) return
       const data = await res.json()
       setReviews(data.reviews)
       setStats(data.stats)
       setLeaderboard(data.leaderboard || [])
+      if (data.reviewers) setAllReviewers(data.reviewers)
     } catch {
     } finally {
       setLoading(false)
     }
-  }, [status, sortBy, lbMode])
+  }, [status, sortBy, lbMode, search, includeReviewers, excludeReviewers, from, to])
 
   const [mounted, setMounted] = useState(false)
-
   useEffect(() => {
     if (!mounted) {
       setMounted(true)
       return
     }
     load()
-  }, [status, sortBy, lbMode, mounted, load])
+  }, [status, sortBy, lbMode, search, includeReviewers, excludeReviewers, from, to, mounted, load])
 
   const loadDevlogStats = useCallback(async () => {
     try {
@@ -127,38 +272,28 @@ export function YswsView({ initial }: Props) {
       if (!res.ok) return
       const data = await res.json()
       setDevlogLeaderboard(data.leaderboard || [])
-    } catch {
-      // silently fail
-    }
+    } catch {}
   }, [])
 
   useEffect(() => {
     loadDevlogStats()
   }, [])
 
-  const FilterBtn = ({
-    val,
-    cur,
-    set,
-    label,
-    count,
-    color,
-  }: {
-    val: string
-    cur: string
-    set: (v: string) => void
-    label: string
-    count?: number
-    color?: string
-  }) => (
-    <button
-      onClick={() => set(val)}
-      className={`font-mono text-xs px-3 py-2 rounded-2xl border-2 transition-all ${cur === val ? (color || 'bg-amber-900/30 text-amber-400 border-amber-700/60') + ' shadow-lg' : 'bg-zinc-900/30 text-amber-300/60 border-amber-800/30 hover:bg-zinc-900/50'}`}
-    >
-      {label}
-      {count !== undefined ? ` (${count})` : ''}
-    </button>
-  )
+  const statusOptions = [
+    { val: 'pending', label: `Pending (${stats.pending})` },
+    { val: 'done', label: `Done (${stats.done})` },
+    { val: 'returned', label: `Returned (${stats.returned})` },
+    { val: 'all', label: `All (${stats.total})` },
+  ]
+
+  const sortOptions = [
+    { val: 'newest', label: 'Newest' },
+    { val: 'oldest', label: 'Oldest' },
+    { val: 'devlogs', label: 'Devlogs ↓' },
+    { val: 'devlogs_asc', label: 'Devlogs ↑' },
+    { val: 'time', label: 'Time ↓' },
+    { val: 'time_asc', label: 'Time ↑' },
+  ]
 
   return (
     <>
@@ -168,14 +303,12 @@ export function YswsView({ initial }: Props) {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 md:mb-8 min-h-[48px]">
-        <div className="flex flex-wrap items-center gap-2 md:gap-4">
-          <h1 className="text-2xl md:text-4xl font-mono text-amber-400">YSWS Reviews</h1>
-          <span className={`px-2 py-1 rounded font-mono text-xs border ${sColor(status)}`}>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </span>
-          {loading && <span className="text-amber-400/50 font-mono text-xs">loading...</span>}
-        </div>
+      <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-4xl font-mono text-amber-400">YSWS Reviews</h1>
+        <span className={`px-2 py-1 rounded font-mono text-xs border ${sColor(status)}`}>
+          {status.charAt(0).toUpperCase() + status.slice(1)}
+        </span>
+        {loading && <span className="text-amber-400/50 font-mono text-xs">loading...</span>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
@@ -226,6 +359,7 @@ export function YswsView({ initial }: Props) {
             </div>
           </div>
         </div>
+
         <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl min-h-[200px]">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-amber-400 font-mono text-base md:text-lg">Leaderboard</h2>
@@ -258,14 +392,13 @@ export function YswsView({ initial }: Props) {
                 </div>
               ))
             ) : (
-              <div className="text-gray-500 font-mono text-sm min-h-[20px]">no reviews yet...</div>
+              <div className="text-gray-500 font-mono text-sm">no reviews yet...</div>
             )}
           </div>
         </div>
+
         <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl min-h-[200px]">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-amber-400 font-mono text-base md:text-lg">Devlog Reviews</h2>
-          </div>
+          <h2 className="text-amber-400 font-mono text-base md:text-lg mb-4">Devlog Reviews</h2>
           <div className="space-y-2">
             {devlogLeaderboard.length > 0 ? (
               devlogLeaderboard.slice(0, 10).map((r, i) => (
@@ -286,54 +419,64 @@ export function YswsView({ initial }: Props) {
                 </div>
               ))
             ) : (
-              <div className="text-gray-500 font-mono text-sm min-h-[20px]">
-                no devlog reviews yet...
-              </div>
+              <div className="text-gray-500 font-mono text-sm">no devlog reviews yet...</div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="mb-4 md:mb-6 space-y-3">
-        <div>
-          <h3 className="text-amber-400 font-mono text-xs mb-2">Status</h3>
-          <div className="flex flex-wrap gap-2">
-            <FilterBtn
-              val="pending"
-              cur={status}
-              set={setStatus}
-              label="Pending"
-              count={stats.pending}
-              color="bg-yellow-900/30 text-yellow-400 border-yellow-700"
+      <div className="mb-6 md:mb-8 bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Dropdown label="Status" value={status} options={statusOptions} onChange={setStatus} />
+          <Dropdown label="Sort by" value={sortBy} options={sortOptions} onChange={setSortBy} />
+          <div className="space-y-1">
+            <label className="text-amber-400 font-mono text-xs">From</label>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              style={{ colorScheme: 'dark' }}
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-amber-600 hover:border-zinc-500 transition-colors"
             />
-            <FilterBtn
-              val="done"
-              cur={status}
-              set={setStatus}
-              label="Done"
-              count={stats.done}
-              color="bg-green-900/30 text-green-400 border-green-700"
+          </div>
+          <div className="space-y-1">
+            <label className="text-amber-400 font-mono text-xs">To</label>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              style={{ colorScheme: 'dark' }}
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-amber-600 hover:border-zinc-500 transition-colors"
             />
-            <FilterBtn
-              val="returned"
-              cur={status}
-              set={setStatus}
-              label="Returned"
-              count={stats.returned}
-              color="bg-red-900/30 text-red-400 border-red-700"
-            />
-            <FilterBtn val="all" cur={status} set={setStatus} label="All" count={stats.total} />
           </div>
         </div>
-        <div>
-          <h3 className="text-amber-400 font-mono text-xs mb-2">Sort</h3>
-          <div className="flex flex-wrap gap-2">
-            <FilterBtn val="oldest" cur={sortBy} set={setSortBy} label="Oldest" />
-            <FilterBtn val="newest" cur={sortBy} set={setSortBy} label="Newest" />
-            <FilterBtn val="devlogs" cur={sortBy} set={setSortBy} label="Devlogs" />
-            <FilterBtn val="time" cur={sortBy} set={setSortBy} label="Time" />
-          </div>
+
+        <div className="space-y-1">
+          <label className="text-amber-400 font-mono text-xs">Search</label>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="search by ftId"
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 font-mono text-xs text-white placeholder-gray-600 focus:outline-none focus:border-amber-600 hover:border-zinc-500 transition-colors"
+          />
         </div>
+
+        {allReviewers.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MultiDropdown
+              label="Include Certified By"
+              selected={includeReviewers}
+              options={allReviewers}
+              onChange={setIncludeReviewers}
+            />
+            <MultiDropdown
+              label="Exclude Certified By"
+              selected={excludeReviewers}
+              options={allReviewers}
+              onChange={setExcludeReviewers}
+            />
+          </div>
+        )}
       </div>
 
       <div className="md:hidden space-y-3">
