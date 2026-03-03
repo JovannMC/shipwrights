@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Cert, Stats, TypeCount, Reviewer } from '@/types'
 import { AvgWaitChart } from './avg-wait-chart'
@@ -135,7 +135,6 @@ function MultiSelect({
 
 export function CertsView({ initial }: Props) {
   const params = useSearchParams()
-  const router = useRouter()
 
   // Determine if URL has non-default filters (server always pre-renders with pending/oldest/weekly)
   const needsInitialLoad =
@@ -158,7 +157,7 @@ export function CertsView({ initial }: Props) {
   const [stats, setStats] = useState(initial.stats)
   const [leaderboard, setLeaderboard] = useState(initial.leaderboard)
   const [types, setTypes] = useState(initial.types)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(needsInitialLoad)
   const [msg, setMsg] = useState<string | null>(null)
   const [now, setNow] = useState(Date.now())
   const [lbMode, setLbMode] = useState(() => params.get('lbMode') || 'weekly')
@@ -199,13 +198,14 @@ export function CertsView({ initial }: Props) {
     }
   }, [selectedTypes, ftType, status, sortBy, lbMode, search, from, to])
 
-  // If URL has non-default filters, skip the initial-load guard so we fetch the right data
-  const ready = useRef(!needsInitialLoad)
+  // On first render: skip load if server already gave us the right data (default filters).
+  // If URL has non-default filters (e.g. after back-navigation), load immediately.
+  const isFirstRender = useRef(true)
 
   useEffect(() => {
-    if (!ready.current) {
-      ready.current = true
-      return
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      if (!needsInitialLoad) return
     }
     load()
   }, [selectedTypes, ftType, status, sortBy, lbMode, search, from, to, load])
@@ -222,8 +222,8 @@ export function CertsView({ initial }: Props) {
     if (from) p.set('from', from)
     if (to) p.set('to', to)
     const qs = p.toString()
-    router.replace(`/admin/ship_certifications${qs ? `?${qs}` : ''}`, { scroll: false })
-  }, [selectedTypes, ftType, status, sortBy, lbMode, search, from, to, router])
+    window.history.replaceState(window.history.state, '', `/admin/ship_certifications${qs ? `?${qs}` : ''}`)
+  }, [selectedTypes, ftType, status, sortBy, lbMode, search, from, to])
 
   useEffect(() => {
     const iv = setInterval(() => setNow(Date.now()), 1000)
@@ -506,7 +506,23 @@ export function CertsView({ initial }: Props) {
       </div>
 
       <div className="md:hidden space-y-3">
-        {certs.map((c) => (
+        {loading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-gradient-to-br from-zinc-900/80 to-black/80 border-2 border-amber-900/30 rounded-2xl p-4 animate-pulse">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-zinc-800 rounded w-3/4" />
+                  <div className="h-3 bg-zinc-800 rounded w-1/3" />
+                </div>
+                <div className="h-5 bg-zinc-800 rounded w-16 ml-2" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="h-3 bg-zinc-800 rounded" />
+                <div className="h-3 bg-zinc-800 rounded" />
+              </div>
+            </div>
+          ))
+        ) : certs.map((c) => (
           <Link
             key={c.id}
             href={`/admin/ship_certifications/${c.id}/edit`}
@@ -586,7 +602,17 @@ export function CertsView({ initial }: Props) {
               </tr>
             </thead>
             <tbody>
-              {certs.map((c) => (
+              {loading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} className="border-b border-amber-900/20 animate-pulse">
+                    {Array.from({ length: 8 }).map((_, j) => (
+                      <td key={j} className="p-4">
+                        <div className="h-4 bg-zinc-800 rounded w-20" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : certs.map((c) => (
                 <tr
                   key={c.id}
                   className="border-b border-amber-900/20 hover:bg-amber-950/20 transition-colors"
