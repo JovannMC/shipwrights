@@ -56,6 +56,7 @@ export interface ShipCert {
   ftId: string
   project: string
   type: string
+  ftType?: string | null
   desc: string
   devTime: string
   submitter: {

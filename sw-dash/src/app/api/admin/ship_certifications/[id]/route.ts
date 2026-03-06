@@ -108,6 +108,7 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       ftId: cert.ftProjectId,
       project: cert.projectName,
       type: cert.projectType,
+      ftType: cert.ftType || null,
       desc: cert.description,
       devTime: cert.devTime,
       submitter: {
