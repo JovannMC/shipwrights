@@ -9,6 +9,12 @@ import { verdictColor } from '@/lib/styles'
 import { AiSummary } from './ai-summary'
 import { SubmitterCard } from '@/components/submitter-card'
 
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
+
 function HistoryCard({ h }: { h: any }) {
   const verdictCls = verdictColor(h.verdict)
 
@@ -198,9 +204,6 @@ export function Form({ shipId }: Props) {
             </h2>
           </div>
           <div className="flex items-start gap-3 shrink-0">
-            {cert.submitter.slackId && (
-              <SubmitterCard slackId={cert.submitter.slackId} username={cert.submitter.username} />
-            )}
             {canReport && cert.ftId && (
               <button
                 onClick={() => setShowReport(true)}
@@ -211,6 +214,33 @@ export function Form({ shipId }: Props) {
             )}
           </div>
         </div>
+
+        {cert.submitter.slackId && (
+          <div className="mb-4">
+            <SubmitterCard slackId={cert.submitter.slackId} username={cert.submitter.username} />
+          </div>
+        )}
+
+        {cert.submitterShipNumber != null && cert.submitterShipNumber > 0 && (
+          <div
+            className={`rounded-2xl border-2 px-5 py-3 mb-4 md:mb-6 font-mono ${
+              cert.submitterShipNumber === 1
+                ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300'
+                : 'bg-zinc-900/60 border-zinc-700/50 text-gray-400'
+            }`}
+          >
+            <span className="text-lg font-bold">
+              {cert.submitterShipNumber === 1
+                ? 'First time shipping on FT!'
+                : `${ordinal(cert.submitterShipNumber)} project shipped on FT`}
+            </span>
+            {cert.submitterShipNumber === 1 && (
+              <span className="block text-sm mt-0.5 text-emerald-400/70">
+                This is {cert.submitter.username}&apos;s very first ship — be extra helpful with feedback!
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
           <div className="lg:col-span-2 space-y-4 md:space-y-6">

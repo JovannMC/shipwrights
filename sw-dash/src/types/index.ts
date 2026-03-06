@@ -94,6 +94,7 @@ export interface ShipCert {
   updatedAt: string
   customBounty?: number | null
   aiSummary?: string
+  submitterShipNumber?: number
   claimedBy?: string | null
   claimedAt?: string | null
   canEditClaim?: boolean

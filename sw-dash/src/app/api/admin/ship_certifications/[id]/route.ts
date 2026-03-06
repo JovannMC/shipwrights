@@ -84,22 +84,24 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       }
     }
 
-    const history = cert.ftProjectId
-      ? await prisma.shipCert.findMany({
-          where: {
-            ftProjectId: cert.ftProjectId,
-          },
-          include: {
-            reviewer: {
-              select: {
-                username: true,
-              },
+    const [history, submitterShipNumber] = await Promise.all([
+      cert.ftProjectId
+        ? prisma.shipCert.findMany({
+            where: { ftProjectId: cert.ftProjectId },
+            include: { reviewer: { select: { username: true } } },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+          })
+        : [],
+      cert.ftSlackId
+        ? prisma.shipCert.count({
+            where: {
+              ftSlackId: cert.ftSlackId,
+              createdAt: { lte: cert.createdAt },
             },
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 20,
-        })
-      : []
+          })
+        : 0,
+    ])
 
     return NextResponse.json({
       id: cert.id,
@@ -151,6 +153,7 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       claimedAt: cert.reviewStartedAt?.toISOString() || null,
       canEditClaim,
       aiSummary: cert.aiSummary,
+      submitterShipNumber,
       history: history.map((h) => ({
         id: h.id,
         verdict: h.status,
