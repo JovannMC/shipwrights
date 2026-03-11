@@ -77,7 +77,9 @@ export const GET = api(PERMS.captain_dashboard)(async ({ user, req }) => {
       total: byReviewer[r.id]?.total ?? 0,
       oldCerts: byReviewer[r.id]?.oldCerts ?? 0,
     }))
-    .sort((a, b) => (b.total !== a.total ? b.total - a.total : a.username.localeCompare(b.username)))
+    .sort((a, b) =>
+      b.total !== a.total ? b.total - a.total : a.username.localeCompare(b.username)
+    )
 
   return NextResponse.json({
     since: since.toISOString(),

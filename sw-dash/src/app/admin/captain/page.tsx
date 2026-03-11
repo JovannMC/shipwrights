@@ -213,9 +213,7 @@ export default function CaptainPage() {
                 <div className="text-2xl font-mono font-bold text-amber-400 mt-2">
                   {data.backlogCount}
                 </div>
-                <p className="font-mono text-xs text-amber-500/60 mt-1">
-                  projects still in review
-                </p>
+                <p className="font-mono text-xs text-amber-500/60 mt-1">projects still in review</p>
               </div>
             </div>
           )}
