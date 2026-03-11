@@ -47,12 +47,15 @@ export default async function Admin() {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               {can(user.role, PERMS.captain_dashboard) && (
-                <Link
-                  href="/admin/captain"
-                  className="bg-amber-500/10 border-2 border-dashed border-amber-500 hover:border-amber-400 text-amber-400 hover:text-amber-300 font-mono text-sm px-4 md:px-6 py-3 rounded-2xl transition-all duration-200 hover:bg-amber-500/20 text-center shadow-lg shadow-amber-950/20 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  ⚓ Captain dashboard
-                </Link>
+                <div className="relative">
+                  <Link
+                    href="/admin/captain"
+                    className="block bg-amber-500/10 border-2 border-dashed border-amber-500 hover:border-amber-400 text-amber-400 hover:text-amber-300 font-mono text-sm px-4 md:px-6 py-3 rounded-2xl transition-all duration-200 hover:bg-amber-500/20 text-center shadow-lg shadow-amber-950/20 hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    ⚓ Captain dashboard
+                  </Link>
+                  <Wip />
+                </div>
               )}
               {can(user.role, PERMS.users_view) && (
                 <Link
