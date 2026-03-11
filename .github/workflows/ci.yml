@@ -3,11 +3,16 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    paths:
+      - 'sw-dash/**'
 
 jobs:
   format:
     name: prettier
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sw-dash
     steps:
       - uses: actions/checkout@v4
 
@@ -19,6 +24,7 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+          cache-dependency-path: sw-dash/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
 
@@ -41,6 +47,9 @@ jobs:
   typecheck:
     name: typescript
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sw-dash
     steps:
       - uses: actions/checkout@v4
 
@@ -52,6 +61,7 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+          cache-dependency-path: sw-dash/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm tsc --noEmit
@@ -67,8 +77,8 @@ jobs:
       - name: check
         id: check
         run: |
-          if git diff origin/main --name-only | grep -q "prisma/schema.prisma"; then
-            if ! git diff origin/main --name-only | grep -q "prisma/migrations/"; then
+          if git diff origin/main --name-only | grep -q "sw-dash/prisma/schema.prisma"; then
+            if ! git diff origin/main --name-only | grep -q "sw-dash/prisma/migrations/"; then
               echo "missing=true" >> $GITHUB_OUTPUT
               exit 1
             fi
