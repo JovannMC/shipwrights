@@ -40,6 +40,7 @@ export const PERMS = {
 
   submitter_edit: 'submitter_edit',
   submitter_delete: 'submitter_delete',
+  submitter_admin: 'submitter_admin',
 }
 
 export const NO_ACCESS_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
@@ -64,7 +65,7 @@ export const ROLES = {
       PERMS.support_admin,
       PERMS.analytics_view,
       PERMS.ysws_view,
-      PERMS.submitter_delete,
+      PERMS.submitter_admin,
       PERMS.captain_dashboard,
     ],
   },
@@ -144,6 +145,8 @@ export function can(userRole: string, perm: string): boolean {
     [PERMS.assign_override]: PERMS.assign_admin,
     [PERMS.support_view]: PERMS.support_admin,
     [PERMS.support_edit]: PERMS.support_admin,
+    [PERMS.submitter_edit]: PERMS.submitter_admin,
+    [PERMS.submitter_delete]: PERMS.submitter_admin,
     [PERMS.payouts_view]: PERMS.payouts_admin,
     [PERMS.payouts_edit]: PERMS.payouts_admin,
     [PERMS.ysws_view]: PERMS.ysws_admin,

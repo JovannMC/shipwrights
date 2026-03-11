@@ -45,8 +45,9 @@ export function SubmitterCard({ slackId, username, className }: Props) {
 
   useEffect(() => {
     fetch(`/api/admin/submitter/${slackId}`)
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
+        if (!d) return
         setProfile(d.profile)
         setNotes(d.notes)
         setTickets(d.tickets)
