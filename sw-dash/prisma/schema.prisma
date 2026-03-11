@@ -50,6 +50,7 @@ model User {
   spotCheckSessions SpotCheckSession[]
 
   submitterNotes FtSubmitterNote[]
+  spotCheckSessionsAsWright SpotCheckSession[] @relation("SpotCheckWright")
 
   @@map("users")
 }
@@ -446,17 +447,21 @@ model SpotCheck {
 // Session for "spot check run": flag certs, pause/resume, track time, show summary when done
 model SpotCheckSession {
   id                  Int       @id @default(autoincrement())
-  staffId              Int
+  staffId             Int
+  wrightId            Int?      // shipwright being spot-checked (from profile page)
   startedAt           DateTime  @default(now())
-  pausedAt            DateTime? // when paused; null when active
+  pausedAt            DateTime?
   endedAt             DateTime?
-  totalSecondsAccrued Int       @default(0) // accumulated active time
+  totalSecondsAccrued Int       @default(0)
   status              String    @default("active") // active | paused | ended
 
-  staff User                   @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  certs SpotCheckSessionCert[]
+  staff  User                   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  wright User?                  @relation("SpotCheckWright", fields: [wrightId], references: [id], onDelete: SetNull)
+  certs  SpotCheckSessionCert[]
 
   @@index([staffId])
+  @@index([staffId, wrightId])
+  @@index([wrightId])
   @@index([status])
   @@map("spot_check_sessions")
 }

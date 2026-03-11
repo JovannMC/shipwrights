@@ -10,6 +10,8 @@ function DoneView({
   doneSummary,
   setDoneSummary,
   endedSessionRef,
+  sessionId,
+  wrightId,
 }: {
   reviewed: number
   doneSummary: {
@@ -20,19 +22,24 @@ function DoneView({
   } | null
   setDoneSummary: (s: typeof doneSummary) => void
   endedSessionRef: React.MutableRefObject<boolean>
+  sessionId?: number | null
+  wrightId?: string
 }) {
   useEffect(() => {
     if (reviewed === 0 || endedSessionRef.current) return
     endedSessionRef.current = true
+    const body: { action: string; sessionId?: number; wrightId?: number } = { action: 'end' }
+    if (sessionId != null && Number.isFinite(sessionId)) body.sessionId = sessionId
+    else if (wrightId != null && Number.isFinite(Number(wrightId))) body.wrightId = Number(wrightId)
     fetch('/api/admin/spot_check_session', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'end' }),
+      body: JSON.stringify(body),
     })
       .then((r) => r.json())
       .then((data) => data.summary && setDoneSummary(data.summary))
       .catch(() => {})
-  }, [reviewed, setDoneSummary, endedSessionRef])
+  }, [reviewed, setDoneSummary, endedSessionRef, sessionId, wrightId])
 
   return (
     <div className="flex h-full flex-col items-center justify-center p-8">
@@ -50,7 +57,7 @@ function DoneView({
           </p>
           {(doneSummary.leftCount !== undefined && doneSummary.leftCount !== null) && (
             <p className="font-mono text-amber-200 text-sm mt-1">
-              There {doneSummary.leftCount === 1 ? 'is' : 'are'} <strong>{doneSummary.leftCount}</strong> left in the batch.
+              There {doneSummary.leftCount === 1 ? 'is' : 'are'} <strong>{doneSummary.leftCount}</strong> left in this session.
             </p>
           )}
         </div>
@@ -85,6 +92,7 @@ export default function Review({ wrightId }: { wrightId: string }) {
     leftCount?: number
     certs: { certId: number; projectName: string | null; status: string }[]
   } | null>(null)
+  const [sessionId, setSessionId] = useState<number | null>(null)
   const endedSessionRef = useRef(false)
   const autoStartedRef = useRef(false)
 
@@ -95,6 +103,7 @@ export default function Review({ wrightId }: { wrightId: string }) {
       setLoading(false)
       return
     }
+    setSessionId(id)
     fetch(`/api/admin/spot_check_session/${id}`)
       .then((r) => r.json())
       .then((data) => {
@@ -133,8 +142,12 @@ export default function Review({ wrightId }: { wrightId: string }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ wrightId: Number.isFinite(wrightIdNum) ? wrightIdNum : null }),
           })
-            .then((sessionRes) => {
-              if (sessionRes.ok) sessionOk = true
+            .then((sessionRes) => sessionRes.json())
+            .then((sessionData) => {
+              if (sessionData.session?.id != null) {
+                setSessionId(sessionData.session.id)
+                sessionOk = true
+              }
               return Promise.all(
                 certsList.map((c: { id: number }) =>
                   fetch('/api/admin/spot_check_session/certs', {
@@ -256,6 +269,8 @@ export default function Review({ wrightId }: { wrightId: string }) {
         doneSummary={doneSummary}
         setDoneSummary={setDoneSummary}
         endedSessionRef={endedSessionRef}
+        sessionId={sessionId}
+        wrightId={wrightId}
       />
     )
 
@@ -332,10 +347,12 @@ export default function Review({ wrightId }: { wrightId: string }) {
             ← back
           </Link>
           <div className="flex items-center gap-4 flex-wrap">
-            <SpotCheckSessionBar forceShow compact />
-            <div className="font-mono text-lg font-bold text-amber-400">
-              {idx + 1}/{certs.length}
-            </div>
+            <SpotCheckSessionBar
+              forceShow
+              compact
+              wrightId={Number.isFinite(Number(wrightId)) ? Number(wrightId) : null}
+              sessionId={sessionId ?? undefined}
+            />
             <div className="font-mono text-sm text-amber-500/50">cert #{cert.id}</div>
           </div>
         </div>

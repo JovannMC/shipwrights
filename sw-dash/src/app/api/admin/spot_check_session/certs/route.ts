@@ -6,8 +6,15 @@ import { PERMS } from '@/lib/perms'
 export const POST = api(PERMS.spot_check)(async ({ user, req }) => {
   const body = await req.json().catch(() => ({}))
   const certId = typeof body.certId === 'number' ? body.certId : parseInt(String(body.certId), 10)
-  const wrightId = body.wrightId != null ? parseInt(String(body.wrightId), 10) : null
-  const validWrightId = Number.isFinite(wrightId) ? wrightId : null
+  const wrightIdRaw = body.wrightId
+  const validWrightId =
+    wrightIdRaw === undefined
+      ? undefined
+      : wrightIdRaw === null
+        ? null
+        : Number.isFinite(Number(wrightIdRaw))
+          ? Number(wrightIdRaw)
+          : null
 
   if (!Number.isFinite(certId)) {
     return NextResponse.json({ error: 'certId required' }, { status: 400 })
@@ -17,6 +24,7 @@ export const POST = api(PERMS.spot_check)(async ({ user, req }) => {
     where: {
       staffId: user.id,
       status: { in: ['active', 'paused'] },
+      ...(validWrightId !== undefined ? { wrightId: validWrightId } : {}),
     },
     orderBy: { startedAt: 'desc' },
   })
@@ -25,7 +33,7 @@ export const POST = api(PERMS.spot_check)(async ({ user, req }) => {
     session = await prisma.spotCheckSession.create({
       data: {
         staffId: user.id,
-        wrightId: validWrightId,
+        wrightId: validWrightId ?? null,
         status: 'active',
       },
     })

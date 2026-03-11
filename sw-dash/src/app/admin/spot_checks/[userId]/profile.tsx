@@ -6,6 +6,7 @@ import Image from 'next/image'
 
 export default function Profile({ userId }: { userId: string }) {
   const [data, setData] = useState<any>(null)
+  const [sessions, setSessions] = useState<any[]>([])
   const [error, setError] = useState(false)
 
   useEffect(() => {
@@ -13,6 +14,13 @@ export default function Profile({ userId }: { userId: string }) {
       .then((r) => r.json())
       .then(setData)
       .catch(() => setError(true))
+  }, [userId])
+
+  useEffect(() => {
+    fetch(`/api/admin/spot_check_session/list?wrightId=${userId}`)
+      .then((r) => r.json())
+      .then((d) => setSessions(d.sessions || []))
+      .catch(() => setSessions([]))
   }, [userId])
 
   if (error)
@@ -51,12 +59,47 @@ export default function Profile({ userId }: { userId: string }) {
             <p className="text-amber-300/50 font-mono text-xs mb-4">Slack ID: {user.slackId}</p>
           )}
 
+          <div className="mb-4">
+            <h3 className="font-mono font-bold text-amber-500 text-xs uppercase tracking-wider mb-2">
+              Review sessions
+            </h3>
+            {sessions.length === 0 ? (
+              <p className="text-amber-500/60 font-mono text-xs mb-2">No active or paused sessions</p>
+            ) : (
+              <ul className="space-y-2 mb-3">
+                {sessions.map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex items-center justify-between gap-2 bg-zinc-900/50 border border-amber-900/30 rounded-xl px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <span className="font-mono text-amber-200 text-sm font-medium truncate block">
+                        {s.staffUsername}
+                      </span>
+                      <span className="font-mono text-amber-500/70 text-xs">
+                        {s.certCount} project{s.certCount !== 1 ? 's' : ''} · {s.status}
+                      </span>
+                    </div>
+                    {s.isMine ? (
+                      <Link
+                        href={`/admin/spot_checks/${user.id}/review?sessionId=${s.id}`}
+                        className="shrink-0 bg-amber-600/30 hover:bg-amber-500/40 text-amber-200 font-mono text-xs px-3 py-1.5 rounded-lg border border-amber-600/50 transition-colors"
+                      >
+                        Resume
+                      </Link>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <div className="flex flex-col gap-2">
             <Link
               href={`/admin/spot_checks/${user.id}/review`}
               className="block w-full bg-blue-500/10 border-2 border-dashed border-blue-600 hover:border-blue-400 text-blue-400 hover:text-blue-300 font-mono text-sm px-4 py-3 rounded-2xl transition-all hover:bg-blue-500/20 hover:scale-[1.02] active:scale-[0.98]"
             >
-              start spot check
+              start new spot check
             </Link>
             {user.ftuid && (
               <a

@@ -3,12 +3,21 @@ import { prisma } from '@/lib/db'
 import { api } from '@/lib/api'
 import { PERMS } from '@/lib/perms'
 
-async function getCurrentSession(userId: number) {
+async function getCurrentSession(
+  userId: number,
+  opts?: { wrightId?: number | null; sessionId?: number }
+) {
+  const where: { staffId: number; status: { in: ['active', 'paused'] }; id?: number; wrightId?: number | null } = {
+    staffId: userId,
+    status: { in: ['active', 'paused'] },
+  }
+  if (opts?.sessionId != null && Number.isFinite(opts.sessionId)) {
+    where.id = opts.sessionId
+  } else if (opts?.wrightId !== undefined) {
+    where.wrightId = opts.wrightId === null || opts.wrightId === undefined ? null : opts.wrightId
+  }
   return prisma.spotCheckSession.findFirst({
-    where: {
-      staffId: userId,
-      status: { in: ['active', 'paused'] },
-    },
+    where,
     include: {
       certs: {
         include: {
@@ -41,8 +50,23 @@ function elapsedSeconds(session: {
   return session.totalSecondsAccrued + Math.floor((now - start) / 1000)
 }
 
-export const GET = api(PERMS.spot_check)(async ({ user }) => {
-  const session = await getCurrentSession(user.id)
+export const GET = api(PERMS.spot_check)(async ({ user, req }) => {
+  const { searchParams } = new URL(req.url)
+  const sessionIdParam = searchParams.get('sessionId')
+  const wrightIdParam = searchParams.get('wrightId')
+  const sessionId = sessionIdParam != null ? parseInt(sessionIdParam, 10) : undefined
+  const wrightIdParamPresent = searchParams.has('wrightId')
+  const wrightIdForQuery =
+    wrightIdParamPresent && wrightIdParam !== ''
+      ? (Number.isFinite(parseInt(wrightIdParam!, 10)) ? parseInt(wrightIdParam!, 10) : null)
+      : wrightIdParamPresent && wrightIdParam === ''
+        ? null
+        : undefined
+
+  const session = await getCurrentSession(user.id, {
+    ...(sessionId != null && Number.isFinite(sessionId) ? { sessionId } : {}),
+    ...(sessionId == null && wrightIdForQuery !== undefined ? { wrightId: wrightIdForQuery } : {}),
+  })
   if (!session) {
     return NextResponse.json({ session: null })
   }
@@ -71,7 +95,7 @@ export const POST = api(PERMS.spot_check)(async ({ user, req }) => {
   const wrightId = typeof body.wrightId === 'number' ? body.wrightId : body.wrightId != null ? parseInt(String(body.wrightId), 10) : undefined
   const validWrightId = wrightId != null && Number.isFinite(wrightId) ? wrightId : null
 
-  const existing = await getCurrentSession(user.id)
+  const existing = await getCurrentSession(user.id, { wrightId: validWrightId ?? undefined })
   if (existing) {
     const totalSeconds = elapsedSeconds(existing)
     return NextResponse.json({
@@ -137,8 +161,15 @@ export const POST = api(PERMS.spot_check)(async ({ user, req }) => {
 export const PATCH = api(PERMS.spot_check)(async ({ user, req }) => {
   const body = await req.json().catch(() => ({}))
   const action = body.action as string // 'pause' | 'resume' | 'end'
+  const sessionIdBody = body.sessionId != null ? parseInt(String(body.sessionId), 10) : undefined
+  const wrightIdBody = body.wrightId != null ? parseInt(String(body.wrightId), 10) : undefined
+  const wrightIdBodyOrNull = body.wrightId === null ? null : wrightIdBody
 
-  const session = await getCurrentSession(user.id)
+  const session = await getCurrentSession(user.id, (() => {
+    if (sessionIdBody != null && Number.isFinite(sessionIdBody)) return { sessionId: sessionIdBody }
+    if (wrightIdBody !== undefined || body.wrightId === null) return { wrightId: wrightIdBodyOrNull ?? null }
+    return undefined
+  })())
   if (!session) {
     return NextResponse.json({ error: 'no active or paused session' }, { status: 404 })
   }

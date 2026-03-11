@@ -21,7 +21,17 @@ export type SpotCheckSummary = {
   certs: { certId: number; projectName: string | null; status: string }[]
 }
 
-export function SpotCheckSessionBar({ forceShow = false, compact = false }: { forceShow?: boolean; compact?: boolean }) {
+export function SpotCheckSessionBar({
+  forceShow = false,
+  compact = false,
+  wrightId,
+  sessionId,
+}: {
+  forceShow?: boolean
+  compact?: boolean
+  wrightId?: number | null
+  sessionId?: number | null
+}) {
   const { user } = useUser()
   const [session, setSession] = useState<SpotCheckState | null>(null)
   const [loading, setLoading] = useState(true)
@@ -35,8 +45,12 @@ export function SpotCheckSessionBar({ forceShow = false, compact = false }: { fo
       setLoading(false)
       return
     }
+    const params = new URLSearchParams()
+    if (sessionId != null && Number.isFinite(sessionId)) params.set('sessionId', String(sessionId))
+    else if (wrightId !== undefined && wrightId !== null && Number.isFinite(wrightId)) params.set('wrightId', String(wrightId))
+    else if (wrightId === null) params.set('wrightId', '')
     try {
-      const res = await fetch('/api/admin/spot_check_session')
+      const res = await fetch(`/api/admin/spot_check_session?${params.toString()}`)
       const data = await res.json()
       if (res.ok && data.session) {
         setSession(data.session)
@@ -48,7 +62,7 @@ export function SpotCheckSessionBar({ forceShow = false, compact = false }: { fo
     } finally {
       setLoading(false)
     }
-  }, [canSpotCheck])
+  }, [canSpotCheck, sessionId, wrightId])
 
   useEffect(() => {
     fetchSession()
@@ -76,10 +90,13 @@ export function SpotCheckSessionBar({ forceShow = false, compact = false }: { fo
   const pauseSession = async () => {
     setBusy(true)
     try {
+      const body: { action: string; sessionId?: number; wrightId?: number | null } = { action: 'pause' }
+      if (session?.id != null) body.sessionId = session.id
+      else if (wrightId !== undefined) body.wrightId = wrightId
       const res = await fetch('/api/admin/spot_check_session', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'pause' }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (res.ok && data.session) {
@@ -93,10 +110,13 @@ export function SpotCheckSessionBar({ forceShow = false, compact = false }: { fo
   const resumeSession = async () => {
     setBusy(true)
     try {
+      const body: { action: string; sessionId?: number; wrightId?: number | null } = { action: 'resume' }
+      if (session?.id != null) body.sessionId = session.id
+      else if (wrightId !== undefined) body.wrightId = wrightId
       const res = await fetch('/api/admin/spot_check_session', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resume' }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (res.ok && data.session) {
@@ -110,10 +130,13 @@ export function SpotCheckSessionBar({ forceShow = false, compact = false }: { fo
   const endSession = async () => {
     setBusy(true)
     try {
+      const body: { action: string; sessionId?: number; wrightId?: number | null } = { action: 'end' }
+      if (session?.id != null) body.sessionId = session.id
+      else if (wrightId !== undefined) body.wrightId = wrightId
       const res = await fetch('/api/admin/spot_check_session', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'end' }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (res.ok && data.summary) {
@@ -136,7 +159,7 @@ export function SpotCheckSessionBar({ forceShow = false, compact = false }: { fo
     return (
       <>
         <div className="inline-flex flex-wrap items-center gap-2 font-mono text-xs bg-amber-950/60 border border-amber-700/50 rounded-lg px-3 py-1.5">
-          <span className="text-amber-400"><strong>{session.certs.length}</strong> project{session.certs.length !== 1 ? 's' : ''} in batch</span>
+          <span className="text-amber-400"><strong>{session.certs.length}</strong> project{session.certs.length !== 1 ? 's' : ''} in this session</span>
           {session.status === 'paused' && <span className="text-amber-500/80">(paused)</span>}
           <span className="text-amber-500/80">·</span>
           {session.status === 'active' ? (
@@ -159,7 +182,7 @@ export function SpotCheckSessionBar({ forceShow = false, compact = false }: { fo
               <div className="p-6">
                 <h3 className="text-xl font-mono font-bold text-amber-400 mb-2">Spot check summary</h3>
                 <p className="font-mono text-amber-200">You&apos;ve reviewed <strong>{summary.reviewedCount}</strong> project{summary.reviewedCount !== 1 ? 's' : ''}.</p>
-                <p className="font-mono text-amber-200 mt-1">There {summary.leftCount === 1 ? 'is' : 'are'} <strong>{summary.leftCount}</strong> left in the batch.</p>
+                <p className="font-mono text-amber-200 mt-1">There {summary.leftCount === 1 ? 'is' : 'are'} <strong>{summary.leftCount}</strong> left in this session.</p>
               </div>
               <div className="p-4 border-t border-amber-900/40">
                 <button onClick={() => setSummary(null)} className="w-full bg-amber-700/40 hover:bg-amber-600/50 text-amber-200 font-mono py-2 rounded-xl border border-amber-600/60 transition-colors">
@@ -187,7 +210,7 @@ export function SpotCheckSessionBar({ forceShow = false, compact = false }: { fo
         ) : (
           <>
             <span className="text-amber-300">
-              <strong>{session.certs.length}</strong> project{session.certs.length !== 1 ? 's' : ''} in batch
+              <strong>{session.certs.length}</strong> project{session.certs.length !== 1 ? 's' : ''} in this session
               {session.status === 'paused' && <span className="text-amber-500/80 ml-1">(paused)</span>}
             </span>
             <div className="flex gap-2">
@@ -228,7 +251,7 @@ export function SpotCheckSessionBar({ forceShow = false, compact = false }: { fo
                 Spot check summary
               </h3>
               <p className="font-mono text-amber-200">You&apos;ve reviewed <strong>{summary.reviewedCount}</strong> project{summary.reviewedCount !== 1 ? 's' : ''}.</p>
-              <p className="font-mono text-amber-200 mt-1">There {summary.leftCount === 1 ? 'is' : 'are'} <strong>{summary.leftCount}</strong> left in the batch.</p>
+              <p className="font-mono text-amber-200 mt-1">There {summary.leftCount === 1 ? 'is' : 'are'} <strong>{summary.leftCount}</strong> left in this session.</p>
             </div>
             <div className="p-4 border-t border-amber-900/40">
               <button
