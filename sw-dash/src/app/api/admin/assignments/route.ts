@@ -72,7 +72,7 @@ export const POST = api()(async ({ user, req }) => {
     })
 
     let reviewers = allUsers.filter((u) => {
-      const userSkills = (u.skills as string[]) || []
+      const userSkills = JSON.parse(u.skills || '[]') as string[]
       return types.some((t: string) => userSkills.includes(t))
     })
 
