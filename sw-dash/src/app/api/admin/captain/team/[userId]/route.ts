@@ -7,9 +7,7 @@ import { getMemberActivity } from '@/lib/captain'
 
 const CACHE_TTL = 90
 
-export const GET = withParams<{ userId: string }>(PERMS.captain_dashboard)(async ({
-  params,
-}) => {
+export const GET = withParams<{ userId: string }>(PERMS.captain_dashboard)(async ({ params }) => {
   const userId = parseId(params.userId, 'user')
   if (!userId) return idErr('user')
 

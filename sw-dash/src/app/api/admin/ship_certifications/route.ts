@@ -8,7 +8,10 @@ export const GET = api(PERMS.certs_view)(async ({ req, user }) => {
     const { searchParams } = new URL(req.url)
     const returnedOnly = searchParams.get('returned') === '1'
     if (returnedOnly && !can(user.role, PERMS.captain_dashboard)) {
-      return NextResponse.json({ error: 'Only captains can view returned-by-admin list' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'Only captains can view returned-by-admin list' },
+        { status: 403 }
+      )
     }
 
     const rawType = searchParams.get('type')

@@ -45,13 +45,19 @@ export async function getMemberActivity(userId: number): Promise<MemberActivityD
   const twelveWeeksAgo = new Date()
   twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 12 * 7)
 
-  const [user, reviewsByWeekRaw, reviewsByDayRaw, spotChecksByWeekRaw, reviewsAllTime, projectTypesRaw] =
-    await Promise.all([
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, username: true, avatar: true, role: true },
-      }),
-      prisma.$queryRaw<ReviewsByWeekRow[]>`
+  const [
+    user,
+    reviewsByWeekRaw,
+    reviewsByDayRaw,
+    spotChecksByWeekRaw,
+    reviewsAllTime,
+    projectTypesRaw,
+  ] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, avatar: true, role: true },
+    }),
+    prisma.$queryRaw<ReviewsByWeekRow[]>`
         SELECT
           DATE(DATE_SUB(reviewCompletedAt, INTERVAL WEEKDAY(reviewCompletedAt) DAY)) AS weekStart,
           COUNT(*) AS total,
@@ -65,7 +71,7 @@ export async function getMemberActivity(userId: number): Promise<MemberActivityD
         GROUP BY weekStart
         ORDER BY weekStart ASC
       `,
-      prisma.$queryRaw<ReviewsByDayRow[]>`
+    prisma.$queryRaw<ReviewsByDayRow[]>`
         SELECT DATE(reviewCompletedAt) AS day, COUNT(*) AS total
         FROM ship_certs
         WHERE reviewerId = ${userId}
@@ -75,7 +81,7 @@ export async function getMemberActivity(userId: number): Promise<MemberActivityD
         GROUP BY day
         ORDER BY day ASC
       `,
-      prisma.$queryRaw<SpotChecksByWeekRow[]>`
+    prisma.$queryRaw<SpotChecksByWeekRow[]>`
       SELECT
         DATE(DATE_SUB(createdAt, INTERVAL WEEKDAY(createdAt) DAY)) AS weekStart,
         SUM(decision = 'approved') AS passed,
@@ -168,8 +174,7 @@ export async function getMemberActivity(userId: number): Promise<MemberActivityD
     { passed: 0, failed: 0 }
   )
   const spotTotal = spotChecksAll.passed + spotChecksAll.failed
-  const passRate =
-    spotTotal > 0 ? Number(((spotChecksAll.passed / spotTotal) * 100).toFixed(1)) : 0
+  const passRate = spotTotal > 0 ? Number(((spotChecksAll.passed / spotTotal) * 100).toFixed(1)) : 0
 
   const projectTypes = projectTypesRaw.map((r) => ({
     projectType: r.projectType,

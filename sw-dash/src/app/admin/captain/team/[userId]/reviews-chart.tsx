@@ -58,8 +58,20 @@ export function ReviewsByWeekChart({ data }: { data: WeekBucket[] }) {
           wrapperStyle={{ fontSize: '11px' }}
           formatter={() => <span className="font-mono text-amber-200/90">Approved / Rejected</span>}
         />
-        <Bar dataKey="approved" stackId="a" fill="#22c55e" name="Approved" isAnimationActive={false} />
-        <Bar dataKey="rejected" stackId="a" fill="#ef4444" name="Rejected" isAnimationActive={false} />
+        <Bar
+          dataKey="approved"
+          stackId="a"
+          fill="#22c55e"
+          name="Approved"
+          isAnimationActive={false}
+        />
+        <Bar
+          dataKey="rejected"
+          stackId="a"
+          fill="#ef4444"
+          name="Rejected"
+          isAnimationActive={false}
+        />
       </BarChart>
     </ResponsiveContainer>
   )

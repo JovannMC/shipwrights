@@ -194,7 +194,9 @@ export default function CaptainPage() {
                                 ({r.oldCerts} older than {data.oldCertDays}d)
                               </span>
                             )}
-                            <span className="text-amber-500/60 ml-1.5" aria-hidden>→</span>
+                            <span className="text-amber-500/60 ml-1.5" aria-hidden>
+                              →
+                            </span>
                           </span>
                         </Link>
                       </li>

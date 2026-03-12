@@ -34,7 +34,10 @@ export function ReviewActivityGrid({ data }: { data: DayData[] }) {
 
   const { weekStarts, gridByWeek } = useMemo(() => {
     if (data.length === 0) {
-      return { weekStarts: [] as string[], gridByWeek: [] as { weekStart: string; dayOfWeek: number; date: string; count: number }[][] }
+      return {
+        weekStarts: [] as string[],
+        gridByWeek: [] as { weekStart: string; dayOfWeek: number; date: string; count: number }[][],
+      }
     }
     const first = data[0].date
     const start = new Date(first + 'T12:00:00')
@@ -62,8 +65,14 @@ export function ReviewActivityGrid({ data }: { data: DayData[] }) {
     return { weekStarts, gridByWeek }
   }, [data, byDate])
 
-  const [selectedWeekIndex, setSelectedWeekIndex] = useState(weekStarts.length > 0 ? weekStarts.length - 1 : 0)
-  const [hoverCell, setHoverCell] = useState<{ date: string; count: number; weekTotal: number } | null>(null)
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState(
+    weekStarts.length > 0 ? weekStarts.length - 1 : 0
+  )
+  const [hoverCell, setHoverCell] = useState<{
+    date: string
+    count: number
+    weekTotal: number
+  } | null>(null)
 
   const selectedWeekStart = weekStarts[selectedWeekIndex] ?? null
   const weekTotals = useMemo(() => {
@@ -83,22 +92,16 @@ export function ReviewActivityGrid({ data }: { data: DayData[] }) {
     (count: number) => {
       if (count <= 0) return 'bg-zinc-700/60'
       const level = Math.min(4, Math.ceil((count / maxCount) * 4))
-      return [
-        'bg-amber-900/70',
-        'bg-amber-700/80',
-        'bg-amber-600',
-        'bg-amber-500',
-        'bg-amber-400',
-      ][level] as string
+      return ['bg-amber-900/70', 'bg-amber-700/80', 'bg-amber-600', 'bg-amber-500', 'bg-amber-400'][
+        level
+      ] as string
     },
     [maxCount]
   )
 
   if (weekStarts.length === 0) {
     return (
-      <div className="font-mono text-amber-500/60 text-sm py-8 text-center">
-        No activity data
-      </div>
+      <div className="font-mono text-amber-500/60 text-sm py-8 text-center">No activity data</div>
     )
   }
 
@@ -107,7 +110,7 @@ export function ReviewActivityGrid({ data }: { data: DayData[] }) {
       ? `${hoverCell.count} review${hoverCell.count !== 1 ? 's' : ''} on ${hoverCell.date} · ${hoverCell.weekTotal} that week`
       : 'Hover a day for details'
 
-  const selectedWeekTotal = selectedWeekStart != null ? weekTotals.get(selectedWeekStart) ?? 0 : 0
+  const selectedWeekTotal = selectedWeekStart != null ? (weekTotals.get(selectedWeekStart) ?? 0) : 0
 
   return (
     <div className="space-y-4">
@@ -139,9 +142,7 @@ export function ReviewActivityGrid({ data }: { data: DayData[] }) {
         <span className="font-mono text-amber-500/70 text-xs">
           {selectedWeekTotal} review{selectedWeekTotal !== 1 ? 's' : ''} that week
         </span>
-        <span className="font-mono text-amber-500/50 text-xs ml-auto">
-          {hoverLine}
-        </span>
+        <span className="font-mono text-amber-500/50 text-xs ml-auto">{hoverLine}</span>
       </div>
 
       {/* Header row: empty corner + month labels at boundaries, clickable week cells */}

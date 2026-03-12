@@ -528,7 +528,9 @@ export function CertsView({ initial, showReturnedByAdmin = false, isReturnedView
                 )}
                 {c.yswsReturned ? (
                   <span className="bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded font-mono text-xs">
-                    {showReturnedByAdmin ? `RETURNED BY ${c.yswsReturnedBy ?? 'admin'}` : 'RETURNED'}
+                    {showReturnedByAdmin
+                      ? `RETURNED BY ${c.yswsReturnedBy ?? 'admin'}`
+                      : 'RETURNED'}
                   </span>
                 ) : (
                   <span
@@ -540,9 +542,7 @@ export function CertsView({ initial, showReturnedByAdmin = false, isReturnedView
               </div>
             </div>
             {c.yswsReturned && showReturnedByAdmin && c.yswsReturnReason && (
-              <div className="text-purple-300/80 font-mono text-xs mb-2">
-                {c.yswsReturnReason}
-              </div>
+              <div className="text-purple-300/80 font-mono text-xs mb-2">{c.yswsReturnReason}</div>
             )}
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
               <div>

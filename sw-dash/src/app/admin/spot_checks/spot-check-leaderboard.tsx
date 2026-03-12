@@ -53,9 +53,7 @@ export default function SpotCheckLeaderboard() {
             key={c.id}
             className="flex items-center gap-3 py-2 px-3 rounded-xl bg-zinc-900/50 border border-amber-900/20 hover:border-amber-800/40 transition-colors"
           >
-            <span className="font-mono text-amber-500/80 w-6 text-sm tabular-nums">
-              #{i + 1}
-            </span>
+            <span className="font-mono text-amber-500/80 w-6 text-sm tabular-nums">#{i + 1}</span>
             {c.avatar ? (
               <Image
                 src={c.avatar}
