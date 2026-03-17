@@ -1,3 +1,6 @@
+from globals import FEEDBACK_MESSAGE
+
+
 def feedback_message(ticket_id):
     return [
 		{
@@ -11,7 +14,7 @@ def feedback_message(ticket_id):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "If you could give us 20 seconds of your time, we would love to know how we did in this ticket!"
+				"text": FEEDBACK_MESSAGE
 			},
 			"accessory": {
 				"type": "button",
