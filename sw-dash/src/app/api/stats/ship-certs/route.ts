@@ -16,6 +16,9 @@ export async function GET(req: NextRequest) {
     windowStart.setHours(0, 0, 0, 0)
     const metricsWindowStart = new Date(now)
     metricsWindowStart.setDate(metricsWindowStart.getDate() - 30)
+    const npsWindowStart = new Date(now)
+    npsWindowStart.setDate(npsWindowStart.getDate() - 7 * 52)
+    npsWindowStart.setHours(0, 0, 0, 0)
     const [
       data,
       pendingCerts,
@@ -67,10 +70,11 @@ export async function GET(req: NextRequest) {
       }),
       prisma.$queryRaw<{ week: string; avgRating: number }[]>`
         SELECT 
-          CONCAT(YEAR(createdAt), '-W', LPAD(WEEK(createdAt, 1), 2, '0')) as week,
+          DATE_FORMAT(createdAt, '%x-W%v') as week,
           AVG(rating) as avgRating
         FROM ticket_feedback
-        GROUP BY CONCAT(YEAR(createdAt), '-W', LPAD(WEEK(createdAt, 1), 2, '0'))
+        WHERE createdAt >= ${npsWindowStart}
+        GROUP BY DATE_FORMAT(createdAt, '%x-W%v')
         ORDER BY week ASC
       `,
       prisma.ticketFeedback.aggregate({
