@@ -36,12 +36,12 @@ export default function Logs() {
     if (authLoading) return
 
     if (!user) {
-      window.location.href = `${process.env.NEXT_PUBLIC_URL}/`
+      window.location.href = '/'
       return
     }
 
     if (!can(user.role, PERMS.certs_view)) {
-      window.location.href = `${process.env.NEXT_PUBLIC_URL}/`
+      window.location.href = '/'
       return
     }
 

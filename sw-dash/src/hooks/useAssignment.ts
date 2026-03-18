@@ -88,11 +88,11 @@ export function useAssignment(id: string) {
     Promise.all([fetch(`/api/admin/assignments/${id}`), fetch('/api/admin')])
       .then(([certRes, userRes]) => {
         if (certRes.status === 401 || userRes.status === 401) {
-          window.location.href = `${process.env.NEXT_PUBLIC_URL}/`
+          window.location.href = '/'
           return
         }
         if (certRes.status === 403) {
-          window.location.href = `${process.env.NEXT_PUBLIC_URL}/${NO_ACCESS_URL}`
+          window.location.href = `/${NO_ACCESS_URL}`
           return
         }
         if (certRes.status === 404) {

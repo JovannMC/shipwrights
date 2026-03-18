@@ -28,7 +28,7 @@ export default function Home() {
           try {
             localStorage.setItem('sw_auth', '1')
           } catch {}
-          window.location.href = `${process.env.NEXT_PUBLIC_URL}/admin`
+          window.location.href = '/admin'
           return
         }
         try {
@@ -74,7 +74,7 @@ export default function Home() {
     setLoading(true)
     setError('')
 
-    window.location.href = `${process.env.NEXT_PUBLIC_URL}/api/login`
+    window.location.href = '/api/login'
   }
 
   const keyLogin = async () => {
@@ -116,7 +116,7 @@ export default function Home() {
         return
       }
 
-      window.location.href = `${process.env.NEXT_PUBLIC_URL}/admin`
+      window.location.href = '/admin'
     } catch (err) {
       if (err instanceof Error) {
         if (err.message.includes('timed out') || err.message.includes('timeout')) {
@@ -248,7 +248,7 @@ export default function Home() {
             <p className="text-gray-500 font-mono text-[10px] md:text-xs text-center leading-relaxed">
               Private system for{' '}
               <a
-                href={process.env.NEXT_PUBLIC_URL || '#'}
+                href="/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-amber-600/80 hover:text-amber-500 underline"

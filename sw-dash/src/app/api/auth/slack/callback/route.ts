@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   const rateLimitResult = loginLimiter(ip)
   if (!rateLimitResult.success) {
-    return NextResponse.redirect(new URL('/?error=slow_down_buddy', process.env.NEXTAUTH_URL!))
+    return NextResponse.redirect(new URL('/?error=slow_down_buddy', request.nextUrl.origin))
   }
 
   try {
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       })
 
       return NextResponse.redirect(
-        new URL('/?error=no_access_get_fucked', process.env.NEXTAUTH_URL!)
+        new URL('/?error=no_access_get_fucked', request.nextUrl.origin)
       )
     }
 
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         meta: { ip, ua: userAgent },
       })
 
-      return NextResponse.redirect(new URL('/?error=invalid_request', process.env.NEXTAUTH_URL!))
+      return NextResponse.redirect(new URL('/?error=invalid_request', request.nextUrl.origin))
     }
 
     const redirectUri = `${process.env.NEXTAUTH_URL}/api/auth/slack/callback`
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       })
 
       return NextResponse.redirect(
-        new URL('/?error=token_exchange_failed', process.env.NEXTAUTH_URL!)
+        new URL('/?error=token_exchange_failed', request.nextUrl.origin)
       )
     }
 
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
         meta: { ip, ua: userAgent },
       })
 
-      return NextResponse.redirect(new URL('/?error=user_info_failed', process.env.NEXTAUTH_URL!))
+      return NextResponse.redirect(new URL('/?error=user_info_failed', request.nextUrl.origin))
     }
 
     const authorizedUser = await prisma.user.findUnique({
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
         meta: { ip, ua: userAgent, email: userInfo.email },
       })
 
-      return NextResponse.redirect(new URL('/?error=naughty_fucker', process.env.NEXTAUTH_URL!))
+      return NextResponse.redirect(new URL('/?error=naughty_fucker', request.nextUrl.origin))
     }
 
     await prisma.loginLog.create({
@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
       meta: { ip, ua: userAgent, email: userInfo.email },
     })
 
-    const response = NextResponse.redirect(new URL('/admin', process.env.NEXTAUTH_URL!))
+    const response = NextResponse.redirect(new URL('/admin', request.nextUrl.origin))
     response.cookies.set('session_token', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -221,6 +221,6 @@ export async function GET(request: NextRequest) {
       meta: { ip, ua: userAgent },
     })
 
-    return NextResponse.redirect(new URL('/?error=server_bumbum', process.env.NEXTAUTH_URL!))
+    return NextResponse.redirect(new URL('/?error=server_bumbum', request.nextUrl.origin))
   }
 }

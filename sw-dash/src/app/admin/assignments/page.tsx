@@ -56,12 +56,12 @@ function Content() {
         ])
 
         if (assignRes.status === 401 || userRes.status === 401) {
-          window.location.href = `${process.env.NEXT_PUBLIC_URL}/`
+          window.location.href = '/'
           return
         }
 
         if (assignRes.status === 403) {
-          window.location.href = `${process.env.NEXT_PUBLIC_URL}/${NO_ACCESS_URL}`
+          window.location.href = `/${NO_ACCESS_URL}`
           return
         }
 
@@ -71,7 +71,7 @@ function Content() {
           setUser(userData.currentUser)
 
           if (!can(userData.currentUser.role, PERMS.assign_view)) {
-            window.location.href = `${process.env.NEXT_PUBLIC_URL}/${NO_ACCESS_URL}`
+            window.location.href = `/${NO_ACCESS_URL}`
             return
           }
         }
