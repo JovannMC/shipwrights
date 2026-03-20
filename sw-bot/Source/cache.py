@@ -125,7 +125,7 @@ class Cache:
         if ticket_id in self.tickets.keys():
             self.tickets[ticket_id]["closedBy"] = claimer
             db.claim_ticket(ticket_id, claimer)
-            db.add_cookies(claimer, amount=0.3, ticket_id=ticket_id)
+            db.add_cookies(claimer, ticket_id)
         else:
             ticket_data = db.get_ticket(ticket_id)
             if ticket_data:

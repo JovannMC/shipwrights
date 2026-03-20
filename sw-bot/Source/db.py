@@ -263,7 +263,7 @@ def get_shipwrights():
         db.close()
 
 
-def add_cookies(slack_id, amount=TICKET_PAY, ticket_id=None):
+def add_cookies(slack_id, ticket_id=None, amount=TICKET_PAY):
     db = get_db()
     if not db or not slack_id:
         return None
