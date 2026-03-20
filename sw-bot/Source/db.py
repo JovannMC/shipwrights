@@ -263,9 +263,9 @@ def get_shipwrights():
         db.close()
 
 
-def add_cookies(user_id, amount=TICKET_PAY):
+def add_cookies(slack_id, amount=TICKET_PAY, ticket_id=None):
     db = get_db()
-    if not db or user_id is None:
+    if not db or not slack_id:
         return None
 
     try:
@@ -279,17 +279,51 @@ def add_cookies(user_id, amount=TICKET_PAY):
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute(
-            "UPDATE users SET cookieBalance = cookieBalance + %s WHERE id = %s",
-            (increment, user_id),
+            """
+            UPDATE users
+            SET cookieBalance = cookieBalance + %s,
+                cookiesEarned = cookiesEarned + %s
+            WHERE slackId = %s
+            """,
+            (increment, increment, slack_id),
         )
         if cursor.rowcount == 0:
             db.rollback()
             return None
 
-        db.commit()
-        cursor.execute("SELECT cookieBalance FROM users WHERE id = %s", (user_id,))
+        cursor.execute(
+            "SELECT id, username, role, avatar, cookieBalance FROM users WHERE slackId = %s",
+            (slack_id,),
+        )
         row = cursor.fetchone()
-        return float(row["cookieBalance"]) if row and row.get("cookieBalance") is not None else 0.0
+        if not row:
+            db.rollback()
+            return None
+
+        cursor.execute(
+            """
+            INSERT INTO sys_logs (
+                userId, slackId, username, role, action, context, statusCode,
+                avatar, targetId, targetType, metadata
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                row["id"],
+                slack_id,
+                row.get("username"),
+                row.get("role"),
+                "ticket_cookie_payout",
+                f"Awarded {increment:.2f} cookies for claiming a ticket",
+                200,
+                row.get("avatar"),
+                ticket_id,
+                "ticket" if ticket_id else "user",
+                json.dumps({"source": "sw-bot", "amount": increment, "ticketId": ticket_id}),
+            ),
+        )
+
+        db.commit()
+        return float(row["cookieBalance"]) if row.get("cookieBalance") is not None else 0.0
     except Exception as e:
         print(f"couldn't increment user balance: {e}")
         db.rollback()

@@ -125,14 +125,14 @@ class Cache:
         if ticket_id in self.tickets.keys():
             self.tickets[ticket_id]["closedBy"] = claimer
             db.claim_ticket(ticket_id, claimer)
-            db.add_cookies(claimer)
+            db.add_cookies(claimer, amount=0.3, ticket_id=ticket_id)
         else:
             ticket_data = db.get_ticket(ticket_id)
             if ticket_data:
                 ticket_data["closedBy"] = claimer
                 self.ticket_data_saver(ticket_data)
                 db.claim_ticket(ticket_id, claimer)
-                db.add_cookies(claimer)
+                db.add_cookies(claimer, amount=0.3, ticket_id=ticket_id)
             else:
                 print(f"URGENT: Something went wrong. Someone tried claiming a ticket and that ticket simply doesn't exist in cache nor db... Ticket ID:{ticket_id}, Cache Dump:{json.dumps(self.tickets)}")
                 print("URGENT: Killing ticket cache...")
