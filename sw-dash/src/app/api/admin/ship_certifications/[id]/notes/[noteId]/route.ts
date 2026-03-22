@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { can, PERMS } from '@/lib/perms'
+import { needAuth } from '@/lib/auth'
 
 interface Note {
   id: string
@@ -23,19 +24,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'ship id is fucked' }, { status: 400 })
     }
 
-    const token = req.cookies.get('session_token')?.value
-    if (!token) {
+    const { user, error } = await needAuth(req)
+
+    if (error || !user) {
       return NextResponse.json({ error: 'not logged in' }, { status: 401 })
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        sessionToken: token,
-        sessionExpires: { gte: new Date() },
-      },
-    })
-
-    if (!user || !user.isActive || !can(user.role, PERMS.certs_admin)) {
+    if (!can(user.role, PERMS.certs_admin)) {
       return NextResponse.json({ error: 'no perms' }, { status: 403 })
     }
 

@@ -17,8 +17,6 @@ model User {
   updatedAt        DateTime      @updatedAt
   isActive         Boolean       @default(true)
   role             String        @default("observer")
-  sessionExpires   DateTime?
-  sessionToken     String?
   currentChallenge String?
   staffNotes       String?       @db.Text
   skills           Json?

@@ -13,14 +13,15 @@ export const POST = withParams(PERMS.users_admin)(async ({ user, params, ip, ua 
     }
 
     await prisma.$transaction([
+      prisma.session.deleteMany({
+        where: { userId },
+      }),
       prisma.yubikey.deleteMany({
         where: { userId },
       }),
       prisma.user.update({
         where: { id: userId },
         data: {
-          sessionToken: null,
-          sessionExpires: null,
           isActive: false,
           role: 'observer',
         },
