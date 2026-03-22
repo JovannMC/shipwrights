@@ -244,7 +244,16 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
     }
 
     if (certifierId !== undefined) {
-      updateData.reviewerId = certifierId
+      if (!can(user.role, PERMS.certs_override)) {
+        return NextResponse.json({ error: 'nah, u cant override certifier' }, { status: 403 })
+      }
+
+      const parsedCertifierId = Number(certifierId)
+      if (!Number.isInteger(parsedCertifierId) || parsedCertifierId <= 0) {
+        return NextResponse.json({ error: 'invalid certifierId' }, { status: 400 })
+      }
+
+      updateData.reviewerId = parsedCertifierId
     }
 
     if (proofVideoUrl !== undefined) {
@@ -288,8 +297,20 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
     const updated = await prisma.shipCert.update({
       where: { id: shipId },
       data: updateData,
-      include: {
-        reviewer: true,
+      select: {
+        id: true,
+        status: true,
+        ftProjectId: true,
+        reviewFeedback: true,
+        proofVideoUrl: true,
+        projectType: true,
+        repoUrl: true,
+        projectName: true,
+        reviewer: {
+          select: {
+            ftuid: true,
+          },
+        },
       },
     })
 
@@ -468,7 +489,10 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
 
     return NextResponse.json({
       success: true,
-      ship: updated,
+      ship: {
+        id: updated.id,
+        status: updated.status,
+      },
     })
   } catch {
     return NextResponse.json({ error: 'shit hit the fan updating ship' }, { status: 500 })
