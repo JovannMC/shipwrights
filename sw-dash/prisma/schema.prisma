@@ -47,8 +47,8 @@ model User {
   spotResolved SpotCheck[] @relation("Resolved")
   swApiKey     String?     @unique @db.VarChar(64)
 
-  submitterNotes   FtSubmitterNote[]
-  stickerRequests  StickerRequest[]
+  submitterNotes  FtSubmitterNote[]
+  stickerRequests StickerRequest[]
 
   @@map("users")
 }
