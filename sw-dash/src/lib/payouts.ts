@@ -1,44 +1,68 @@
 import { prisma } from './db'
 
 const RATES: Record<string, number> = {
-  'Web App': 0.75,
-  'Chat Bot': 0.75,
-  Extension: 0.94,
-  CLI: 1,
-  Cargo: 1,
-  'Desktop App (Windows)': 1.25,
-  'Minecraft Mods': 1,
-  'Android App': 1,
-  'iOS App': 1,
-  'Steam Games': 1,
-  PyPI: 1,
-  'Desktop App (Linux)': 1.4,
-  'Desktop App (macOS)': 1.4,
-  Hardware: 1.4,
-  Other: 1.4,
+  'Web App': 0.6,
+  'Chat Bot': 0.6,
+  Extension: 1.0,
+  CLI: 1.0,
+  Cargo: 1.0,
+  'Desktop App (Windows)': 1.5,
+  'Minecraft Mods': 1.5,
+  'Android App': 1.5,
+  'iOS App': 1.5,
+  'Steam Games': 1.0,
+  PyPI: 1.5,
+  'Desktop App (Linux)': 1.5,
+  'Desktop App (macOS)': 1.5,
+  Hardware: 1.0,
+  Other: 1.5,
 }
 
 const MULTI = [1.75, 1.5, 1.25]
+const PAYOUT_LB_MODE: 'daily' | 'weekly' = 'daily'
 
 export function getBounty(type: string | null): number {
   if (!type) return 1
   return RATES[type] ?? 1
 }
 
+export function getDailyPeriod(): { start: Date; end: Date } {
+  const now = new Date()
+  const start = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12, 0, 0, 0)
+  )
+  if (now.getUTCHours() < 12) {
+    start.setUTCDate(start.getUTCDate() - 1)
+  }
+  const end = new Date(start)
+  end.setUTCDate(start.getUTCDate() + 1)
+  return { start, end }
+}
+
 export async function getMulti(userId: number): Promise<number> {
   const now = new Date()
-  const day = now.getDay()
-  const weekStart = new Date(now)
-  weekStart.setDate(now.getDate() - day)
-  weekStart.setHours(0, 0, 0, 0)
-  const nextSunday = new Date(weekStart)
-  nextSunday.setDate(weekStart.getDate() + 7)
+  let periodStart: Date
+  let periodEnd: Date
+
+  if (PAYOUT_LB_MODE === 'weekly') {
+    const day = now.getUTCDay()
+    periodStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - day, 0, 0, 0, 0)
+    )
+    periodEnd = new Date(periodStart)
+    periodEnd.setUTCDate(periodStart.getUTCDate() + 7)
+  } else {
+    // daily mode: 12:00 UTC to 11:59:59 UTC next day
+    const daily = getDailyPeriod()
+    periodStart = daily.start
+    periodEnd = daily.end
+  }
 
   const myCount = await prisma.shipCert.count({
     where: {
       reviewerId: userId,
       status: { in: ['approved', 'rejected'] },
-      reviewCompletedAt: { gte: weekStart, lt: nextSunday },
+      reviewCompletedAt: { gte: periodStart, lt: periodEnd },
     },
   })
 
@@ -53,7 +77,7 @@ export async function getMulti(userId: number): Promise<number> {
     by: ['reviewerId'],
     where: {
       status: { in: ['approved', 'rejected'] },
-      reviewCompletedAt: { gte: weekStart, lt: nextSunday },
+      reviewCompletedAt: { gte: periodStart, lt: periodEnd },
       reviewerId: sysUser ? { not: sysUser.id } : undefined,
     },
     _count: true,
@@ -66,12 +90,85 @@ export async function getMulti(userId: number): Promise<number> {
   return 1
 }
 
-export async function calc(userId: number, type: string | null, customBounty?: number | null) {
-  const bounty = getBounty(type)
-  const multi = await getMulti(userId)
-  const base = bounty * multi
-  const total = customBounty ? base + customBounty : base
-  return { cookies: total, multi, bounty, customBounty: customBounty || 0 }
+export async function calc(params: {
+  userId: number
+  projectType: string | null
+  certCreatedAt: Date
+  customBounty?: number | null
+  status?: string | null
+}) {
+  const { userId, projectType, certCreatedAt, customBounty } = params
+  const base = getBounty(projectType)
+
+  const rankMulti = await getMulti(userId)
+
+  const { start: periodStart, end: periodEnd } = getDailyPeriod()
+
+  const myCountToday = await prisma.shipCert.count({
+    where: {
+      reviewerId: userId,
+      status: { in: ['approved', 'rejected'] },
+      reviewCompletedAt: { gte: periodStart, lt: periodEnd },
+    },
+  })
+
+  // First Review
+  let firstReviewMulti = 1
+  if (myCountToday === 0) {
+    firstReviewMulti = 1.5
+  }
+
+  // Daily Grind
+  let dailyGrindMulti = 1
+  if (myCountToday >= 15) {
+    dailyGrindMulti = 1.3
+  } else if (myCountToday >= 7) {
+    dailyGrindMulti = 1.2
+  }
+
+  // Old Projects
+  let oldProjectMulti = 1
+  const hoursOld = (Date.now() - certCreatedAt.getTime()) / (1000 * 60 * 60)
+  if (hoursOld > 4 * 24) {
+    oldProjectMulti = 1.5
+  } else if (hoursOld > 24) {
+    oldProjectMulti = 1.2
+  }
+
+  let newProjectPenalty = 1
+  if (hoursOld <= 24) {
+    const oldProjectsInQueue = await prisma.shipCert.count({
+      where: {
+        status: 'pending',
+        createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
+    })
+    if (oldProjectsInQueue > 7) {
+      newProjectPenalty = 0.8
+    }
+  }
+
+  let rejectionPenalty = 1
+  if (params.status === 'rejected') {
+    rejectionPenalty = 0.8
+  }
+
+  const totalMulti =
+    rankMulti *
+    firstReviewMulti *
+    dailyGrindMulti *
+    oldProjectMulti *
+    newProjectPenalty *
+    rejectionPenalty
+
+  const total = base * totalMulti + (customBounty || 0)
+
+  return {
+    cookies: total,
+    base,
+    multi: totalMulti,
+    customBounty: customBounty || 0,
+  }
 }
 
 export { RATES }

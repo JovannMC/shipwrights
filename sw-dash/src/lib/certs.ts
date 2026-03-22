@@ -71,6 +71,14 @@ async function fetchStats(lbMode: string) {
     yesterdayEndUTC = new Date(
       Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), 0, 0, 0, 0)
     )
+  } else if (lbMode === 'daily') {
+    const n = new Date()
+    weekStart = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), 12, 0, 0, 0))
+    if (n.getUTCHours() < 12) {
+      weekStart.setUTCDate(weekStart.getUTCDate() - 1)
+    }
+    weekEnd = new Date(weekStart.getTime() + 24 * 60 * 60 * 1000)
+    yesterdayEndUTC = weekStart // prevCount will be 0, no rank changes displayed
   }
 
   const [historyRows, statsRows, leaderRows] = await Promise.all([
@@ -106,7 +114,7 @@ async function fetchStats(lbMode: string) {
     `,
 
     // Leaderboard with usernames + rank comparison in ONE query
-    lbMode === 'weekly'
+    lbMode === 'weekly' || lbMode === 'daily'
       ? prisma.$queryRaw<LeaderRow[]>`
           SELECT
             sc.reviewerId AS reviewerId,
@@ -201,7 +209,7 @@ async function fetchStats(lbMode: string) {
 
   const prevLeaderboard = leaderRows
     .map((r) => ({ id: r.reviewerId, name: r.username || 'unknown', count: norm(r.prevCount) }))
-    .filter((r) => lbMode !== 'weekly' || r.name !== 'System')
+    .filter((r) => r.name !== 'System')
     .sort((a, b) => b.count - a.count)
 
   const prevRankMap = new Map<number, number>()
@@ -214,7 +222,7 @@ async function fetchStats(lbMode: string) {
       count: norm(r.currentCount),
       streak: r.streak || 0,
     }))
-    .filter((r) => lbMode !== 'weekly' || r.name !== 'System')
+    .filter((r) => r.name !== 'System')
     .sort((a, b) => b.count - a.count)
 
   const leaderboard = currentLeaderboard.map((r, i) => {

@@ -47,7 +47,8 @@ model User {
   spotResolved SpotCheck[] @relation("Resolved")
   swApiKey     String?     @unique @db.VarChar(64)
 
-  submitterNotes FtSubmitterNote[]
+  submitterNotes   FtSubmitterNote[]
+  stickerRequests  StickerRequest[]
 
   @@map("users")
 }
@@ -405,6 +406,17 @@ model SysLog {
   @@index([targetType])
   @@index([targetType, targetId])
   @@map("sys_logs")
+}
+
+model StickerRequest {
+  id          Int      @id @default(autoincrement())
+  ftProjectId String
+  requestedBy Int
+  createdAt   DateTime @default(now())
+  requester   User     @relation(fields: [requestedBy], references: [id])
+
+  @@index([requestedBy])
+  @@map("sticker_requests")
 }
 
 model SpotCheck {
