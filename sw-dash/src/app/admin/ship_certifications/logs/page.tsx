@@ -150,7 +150,8 @@ export default function Logs() {
               <span className="text-gray-400 cursor-help">Rate ⓘ:</span>
               <span className="text-amber-400 font-bold">{stats?.approvalRate || 0}%</span>
               <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                Based on unique projects, not individual reviews. If a project is rejected then resubmitted and approved, it counts as 1 approval — not 1 rejection + 1 approval.
+                Based on unique projects, not individual reviews. If a project is rejected then
+                resubmitted and approved, it counts as 1 approval — not 1 rejection + 1 approval.
               </div>
             </div>
           </div>

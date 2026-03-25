@@ -315,10 +315,13 @@ export function CertsView({ initial }: Props) {
             </div>
 
             <div className="relative group">
-              <div className="text-gray-500 font-mono text-xs mb-1 cursor-help">Approval rate ⓘ</div>
+              <div className="text-gray-500 font-mono text-xs mb-1 cursor-help">
+                Approval rate ⓘ
+              </div>
               <span className="text-xl font-bold font-mono text-white">{stats.approvalRate}%</span>
               <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                Based on unique projects, not individual reviews. If a project is rejected then resubmitted and approved, it counts as 1 approval — not 1 rejection + 1 approval.
+                Based on unique projects, not individual reviews. If a project is rejected then
+                resubmitted and approved, it counts as 1 approval — not 1 rejection + 1 approval.
               </div>
             </div>
           </div>

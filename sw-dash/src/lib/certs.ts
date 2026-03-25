@@ -56,9 +56,7 @@ type UniqueProjectRow = { approved: bigint; rejected: bigint }
  * Pass `before` to exclude verdicts completed on or after that date (for yesterday's rate).
  */
 export async function fetchUniqueProjectStats(before?: Date) {
-  const dateFilter = before
-    ? `AND sc.reviewCompletedAt < '${before.toISOString()}'`
-    : ''
+  const dateFilter = before ? `AND sc.reviewCompletedAt < '${before.toISOString()}'` : ''
 
   const rows = await prisma.$queryRawUnsafe<UniqueProjectRow[]>(`
     SELECT
@@ -129,9 +127,10 @@ async function fetchStats(lbMode: string) {
     yesterdayEndUTC = weekStart // prevCount will be 0, no rank changes displayed
   }
 
-  const [historyRows, statsRows, leaderRows, uniqueStats, uniqueStatsYesterday] = await Promise.all([
-    // Historical avg wait (last 14 days) - for trend chart
-    prisma.$queryRaw<{ date: Date; avgWaitSeconds: number }[]>`
+  const [historyRows, statsRows, leaderRows, uniqueStats, uniqueStatsYesterday] = await Promise.all(
+    [
+      // Historical avg wait (last 14 days) - for trend chart
+      prisma.$queryRaw<{ date: Date; avgWaitSeconds: number }[]>`
       SELECT 
         DATE(reviewCompletedAt) as date,
         AVG(TIMESTAMPDIFF(SECOND, createdAt, reviewCompletedAt)) as avgWaitSeconds
@@ -142,8 +141,8 @@ async function fetchStats(lbMode: string) {
       ORDER BY date ASC
     `,
 
-    // Stats + queue in ONE SQL query
-    prisma.$queryRaw<StatsRow[]>`
+      // Stats + queue in ONE SQL query
+      prisma.$queryRaw<StatsRow[]>`
       SELECT
         SUM(status = 'approved') AS approved,
         SUM(status = 'rejected') AS rejected,
@@ -161,9 +160,9 @@ async function fetchStats(lbMode: string) {
       FROM ship_certs
     `,
 
-    // Leaderboard with usernames + rank comparison in ONE query
-    lbMode === 'weekly' || lbMode === 'daily'
-      ? prisma.$queryRaw<LeaderRow[]>`
+      // Leaderboard with usernames + rank comparison in ONE query
+      lbMode === 'weekly' || lbMode === 'daily'
+        ? prisma.$queryRaw<LeaderRow[]>`
           SELECT
             sc.reviewerId AS reviewerId,
             u.username AS username,
@@ -179,7 +178,7 @@ async function fetchStats(lbMode: string) {
             AND sc.reviewCompletedAt < ${weekEnd}
           GROUP BY sc.reviewerId, u.username, u.streak
         `
-      : prisma.$queryRaw<LeaderRow[]>`
+        : prisma.$queryRaw<LeaderRow[]>`
           SELECT
             sc.reviewerId AS reviewerId,
             u.username AS username,
@@ -195,10 +194,11 @@ async function fetchStats(lbMode: string) {
           GROUP BY sc.reviewerId, u.username, u.streak
         `,
 
-    // Unique project approval rate (latest verdict per ftProjectId)
-    fetchUniqueProjectStats(),
-    fetchUniqueProjectStats(today),
-  ])
+      // Unique project approval rate (latest verdict per ftProjectId)
+      fetchUniqueProjectStats(),
+      fetchUniqueProjectStats(today),
+    ]
+  )
 
   // Process stats
   const statsRow = statsRows[0]
