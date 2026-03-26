@@ -19,6 +19,23 @@ VIBES_CACHE = {
     "content": None
 }
 
+REJECTION_REASONS = {
+    "broken_feature": "A core feature of the project is broken, non-functional, or crashes during use",
+    "demo_link_problems": "The demo link is missing, broken, leads to a 404, or does not showcase the project",
+    "readme_problems": "The README is missing, incomplete, or does not explain the project's purpose, usage, or setup",
+    "undisclosed_ai": "The project contains patterns of AI-generated code or content that was not declared by the user",
+    "releases_format_compiled_error": "GitHub releases are missing, improperly formatted, or the provided build does not compile or run",
+    "non_raw_readme": "The README is not raw and contains rendered HTML or non-standard formatting instead of plain markdown",
+    "repo_or_project": "The repository is private, empty, has no meaningful code, or the project structure is fundamentally broken",
+    "did_not_meet_requirements": "The project does not meet the minimum shipping requirements for its category (e.g. web app without live demo, bot not hosted)",
+    "not_marked_as_update": "The project is an update to a previously shipped project but was not marked as an update submission",
+    "no_devlogs_or_time": "The project has no development logs or insufficient tracked time on Hackatime to verify effort",
+    "insufficient_instructions": "The project lacks clear instructions on how to install, set up, or use it beyond what the README covers",
+    "requested": "The user themselves requested the project be rejected or withdrawn",
+    "fraud": "The submission is fraudulent, plagiarized, or otherwise dishonest",
+    "ysws": "The project does not meet the You Ship We Ship program-specific requirements",
+}
+
 TYPES = [
   "CLI",
   "Cargo",
@@ -254,6 +271,34 @@ But try to lean towards a one, like if it's really obvious just say it and try t
 ## Response Format
 Return ONLY valid JSON with no markdown, no code blocks and try to be concise:
 {{"summary": "Your analysis and decision"}}"""
+
+
+def format_rejection_analysis_prompt(project_description, reviewer_feedback):
+    reasons_formatted = "\n".join(
+        f"- **{reason}**: {meaning}" for reason, meaning in REJECTION_REASONS.items()
+    )
+    return f"""You are a rejection classifier for the Shipwrights team at Hack Club.
+
+## Your Task
+Analyze the project description and the reviewer's feedback to determine the primary reason the project was rejected.
+
+## Rejection Categories
+{reasons_formatted}
+
+## Project Description
+{project_description}
+
+## Reviewer Feedback
+{reviewer_feedback}
+
+## Instructions
+1. Read the reviewer's feedback carefully and match it to the most fitting rejection category.
+2. If multiple reasons apply, pick the single most dominant one that caused the rejection.
+3. Provide a short explanation of why this category was chosen.
+
+## Response Format
+Return ONLY valid JSON with no markdown, no code blocks, no explanation:
+{{"reason": "category_key", "explanation": "Brief justification for this classification"}}"""
 
 
 def clean_json_response(content: str) -> str:

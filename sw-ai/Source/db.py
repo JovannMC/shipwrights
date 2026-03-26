@@ -63,6 +63,21 @@ def get_ticket_question(ticket_id):
         cursor.close()
         conn.close()
 
+def get_cert_rejection_info(cert_id):
+    conn = db_pool.get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            """
+            SELECT reviewFeedback, description FROM ship_certs WHERE id = %s
+            """, (cert_id,)
+        )
+        result = cursor.fetchone()
+        return result if result else None
+    finally:
+        cursor.close()
+        conn.close()
+
 def get_recent_tickets():
     conn = db_pool.get_connection()
     cursor = conn.cursor(dictionary=True)

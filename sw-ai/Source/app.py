@@ -135,6 +135,32 @@ def get_vibes():
     VIBES_CACHE["created_at"] = datetime.now()
     return jsonify(ai_response), 200
 
+@app.get("/analysis/rejection")
+def analyze_rejection_reason():
+    data = request.json
+    cert_id = data.get("cert_id")
+
+    cert_data = get_cert_rejection_info(cert_id)
+    if not cert_data:
+        return jsonify({"error": "cert not found"}), 404
+
+    prompt = format_rejection_analysis_prompt(
+        project_description=cert_data.get("description", ""),
+        reviewer_feedback=cert_data.get("reviewFeedback", "")
+    )
+    response = get_ai_response(content=prompt, keys=["reason", "explanation"])
+
+    if response["error"]:
+        return jsonify(response), 500
+    ai_response = response["content"]
+
+    return jsonify({
+        "reason": ai_response["reason"],
+        "explanation": ai_response["explanation"],
+    }), 200
+
+
+
 if __name__ == "__main__":
     try:
         reminder_thread = threading.Thread(target=history_loop, daemon=True)
