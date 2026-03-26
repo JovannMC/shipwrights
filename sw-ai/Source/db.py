@@ -145,6 +145,28 @@ def get_context_tickets():
         conn.close()
 
 
+def save_rejection_reason(cert_id, reason, explanation):
+    conn = db_pool.get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            """
+            UPDATE ship_certs SET rejectionReason = %s, rejectionExplanation = %s WHERE id = %s
+            """, (reason, explanation, cert_id)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"Error saving rejection reason for cert {cert_id}: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
 def save_metrics_history(data, created_at=None):
     conn = db_pool.get_connection()
     cursor = conn.cursor(dictionary=True)

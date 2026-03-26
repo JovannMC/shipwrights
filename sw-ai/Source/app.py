@@ -154,6 +154,8 @@ def analyze_rejection_reason():
         return jsonify(response), 500
     ai_response = response["content"]
 
+    save_rejection_reason(cert_id, ai_response["reason"], ai_response["explanation"])
+
     return jsonify({
         "reason": ai_response["reason"],
         "explanation": ai_response["explanation"],
