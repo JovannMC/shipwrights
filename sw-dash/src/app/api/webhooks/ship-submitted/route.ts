@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { bust } from '@/lib/cache'
 import { log } from '@/lib/log'
 import { checkType } from '@/lib/typecheck'
+import { safeCompare } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
@@ -23,7 +24,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const apiKey = request.headers.get('x-api-key')
-    if (apiKey !== process.env.FLAVORTOWN_API_KEY) {
+    const ftKey = process.env.FLAVORTOWN_API_KEY
+    if (!apiKey || !ftKey || !safeCompare(apiKey, ftKey)) {
       await log({
         action: 'ft_webhook_blocked',
         status: 401,

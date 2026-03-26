@@ -18,10 +18,22 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
     const error = searchParams.get('error')
+    const state = searchParams.get('state')
 
     const ip =
       request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
     const userAgent = request.headers.get('user-agent') || 'unknown'
+
+    const savedState = request.cookies.get('oauth_state')?.value
+    if (!state || !savedState || state !== savedState) {
+      await log({
+        action: 'auth_login_failed',
+        status: 403,
+        context: 'oauth state mismatch',
+        meta: { ip, ua: userAgent },
+      })
+      return NextResponse.redirect(new URL('/?error=invalid_state', process.env.NEXTAUTH_URL!))
+    }
 
     if (error) {
       await prisma.loginLog.create({
@@ -201,6 +213,7 @@ export async function GET(request: NextRequest) {
       sameSite: 'lax',
       maxAge: 86400 * 7,
     })
+    response.cookies.delete('oauth_state')
 
     return response
   } catch {

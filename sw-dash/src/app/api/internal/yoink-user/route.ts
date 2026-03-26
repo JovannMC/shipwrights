@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { headers } from 'next/headers'
 import { log } from '@/lib/log'
+import { safeCompare } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
@@ -11,7 +12,8 @@ export async function POST(request: NextRequest) {
     const headersList = await headers()
     const apiKey = headersList.get('x-api-key')
 
-    if (!apiKey || apiKey !== process.env.API_KEY) {
+    const internalApiKey = process.env.API_KEY
+    if (!apiKey || !internalApiKey || !safeCompare(apiKey, internalApiKey)) {
       await log({
         action: 'internal_yoink_denied',
         status: 403,
@@ -45,14 +47,15 @@ export async function POST(request: NextRequest) {
     }
 
     await prisma.$transaction([
+      prisma.session.deleteMany({
+        where: { userId: user.id },
+      }),
       prisma.yubikey.deleteMany({
         where: { userId: user.id },
       }),
       prisma.user.update({
         where: { id: user.id },
         data: {
-          sessionToken: null,
-          sessionExpires: null,
           isActive: false,
         },
       }),

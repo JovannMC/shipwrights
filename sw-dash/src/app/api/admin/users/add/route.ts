@@ -83,5 +83,15 @@ export const POST = api(PERMS.users_add)(async ({ user, req, ip, ua }) => {
     },
   })
 
-  return NextResponse.json({ user: newUser })
+  return NextResponse.json({
+    user: {
+      id: newUser.id,
+      username: newUser.username,
+      slackId: newUser.slackId,
+      avatar: newUser.avatar,
+      role: newUser.role,
+      isActive: newUser.isActive,
+      createdAt: newUser.createdAt,
+    },
+  })
 })

@@ -58,14 +58,6 @@ export async function createSession(userId: number, ua?: string, ip?: string) {
     },
   })
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      sessionToken: token,
-      sessionExpires: expires,
-    },
-  })
-
   return token
 }
 
@@ -91,7 +83,20 @@ export async function getSession(token: string) {
 
   const sesh = await prisma.session.findUnique({
     where: { token },
-    include: { user: true },
+    select: {
+      expiresAt: true,
+      user: {
+        select: {
+          id: true,
+          username: true,
+          slackId: true,
+          ftuid: true,
+          role: true,
+          isActive: true,
+          avatar: true,
+        },
+      },
+    },
   })
 
   if (!sesh || sesh.expiresAt <= new Date() || !sesh.user.isActive) {
@@ -144,14 +149,7 @@ export async function kill(token: string) {
     } catch {}
   }
 
-  const sesh = await prisma.session.findUnique({ where: { token }, select: { userId: true } })
   await prisma.session.deleteMany({ where: { token } })
-  if (sesh) {
-    await prisma.user.update({
-      where: { id: sesh.userId },
-      data: { sessionToken: null, sessionExpires: null },
-    })
-  }
 }
 
 export async function nuke(userId: number) {
@@ -166,19 +164,11 @@ export async function nuke(userId: number) {
   }
 
   await prisma.session.deleteMany({ where: { userId } })
-  await prisma.user.update({
-    where: { id: userId },
-    data: { sessionToken: null, sessionExpires: null },
-  })
 }
 
 export async function cleanExpired() {
   await prisma.session.deleteMany({
     where: { expiresAt: { lt: new Date() } },
-  })
-  await prisma.user.updateMany({
-    where: { sessionExpires: { lt: new Date() } },
-    data: { sessionToken: null, sessionExpires: null },
   })
 }
 

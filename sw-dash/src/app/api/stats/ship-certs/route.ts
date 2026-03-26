@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCerts } from '@/lib/certs'
 import { prisma } from '@/lib/db'
 import { reportError } from '@/lib/sentry-server'
+import { safeCompare } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   const key = req.headers.get('x-api-key')
-  if (key !== process.env.FLAVORTOWN_API_KEY) {
+  const ftKey = process.env.FLAVORTOWN_API_KEY
+  if (!key || !ftKey || !safeCompare(key, ftKey)) {
     return NextResponse.json({ error: 'nah who tf are you' }, { status: 401 })
   }
 

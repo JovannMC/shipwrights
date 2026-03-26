@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getSlackUser } from '@/lib/slack'
+import { safeCompare } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   try {
     const apiKey = request.headers.get('x-api-key')
     const internalApiKey = process.env.API_KEY
 
-    if (!internalApiKey || apiKey !== internalApiKey) {
+    if (!internalApiKey || !apiKey || !safeCompare(apiKey, internalApiKey)) {
       return NextResponse.json({ error: 'unauthorized bruh' }, { status: 401 })
     }
 
@@ -25,7 +26,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          user: found,
+          user: {
+            id: found.id,
+            slackId: found.slackId,
+            username: found.username,
+            role: found.role,
+          },
           alreadyExisted: true,
         },
         { status: 200 }
@@ -48,7 +54,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: newUser,
+      user: {
+        id: newUser.id,
+        slackId: newUser.slackId,
+        username: newUser.username,
+        role: newUser.role,
+      },
       alreadyExisted: false,
     })
   } catch (e) {

@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { push } from '@/lib/push/server'
 import { msgs } from '@/lib/push/messages'
+import { safeCompare } from '@/lib/utils'
 
 export async function POST(req: NextRequest) {
   const key = req.headers.get('x-api-key')
-  if (key !== process.env.API_KEY) {
+  const apiKey = process.env.API_KEY
+  if (!key || !apiKey || !safeCompare(key, apiKey)) {
     return NextResponse.json({ error: 'nah' }, { status: 401 })
   }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { needAuth } from './auth'
 import { can } from './perms'
 import { getMeta } from './meta'
+import { safeCompare } from './utils'
 
 type User = {
   id: number
@@ -82,7 +83,8 @@ export function yswsApi(handler: (req: NextRequest) => Promise<NextResponse>) {
   return async (req: NextRequest) => {
     const key = req.headers.get('x-api-key')
 
-    if (key && key === process.env.YSWS_API_KEY) {
+    const yswsKey = process.env.YSWS_API_KEY
+    if (key && yswsKey && safeCompare(key, yswsKey)) {
       return handler(req)
     }
 
@@ -110,7 +112,8 @@ export function yswsApiWithParams<P = { id: string }>(perm?: string) {
       const key = req.headers.get('x-api-key')
       const p = await params
 
-      if (key && key === process.env.YSWS_API_KEY) {
+      const yswsKey = process.env.YSWS_API_KEY
+      if (key && yswsKey && safeCompare(key, yswsKey)) {
         const { ip, ua } = getMeta(req)
         return handler({
           user: { id: 0, username: 'api', role: 'admin', slackId: '', isActive: true },
