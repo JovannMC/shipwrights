@@ -35,18 +35,15 @@ def meta_message_blocks(text):
 			"type": "header",
 			"text": {
 				"type": "plain_text",
-				"text": "Shipwright Meta Post",
+				"text": "Meta Post",
 				"emoji": True
 			}
-		},
-		{
-			"type": "divider"
 		},
 		{
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f">{text}"
+				"text": f">*{text}*"
 			}
 		},
 		{
