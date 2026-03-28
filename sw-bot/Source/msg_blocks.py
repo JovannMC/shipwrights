@@ -29,7 +29,7 @@ def feedback_message(ticket_id):
 		}
 	]
 
-def meta_message_blocks(text):
+def meta_message_blocks(text, user_id):
 	blocks = [
 		{
 			"type": "header",
@@ -50,13 +50,33 @@ def meta_message_blocks(text):
 			"type": "divider"
 		},
 	]
-	if ANNOUNCE_META:
+	if "<" in text and ANNOUNCE_META:
+		blocks.append({
+			"type": "context",
+			"elements": [
+				{
+					"type": "mrkdwn",
+					"text": f"sent by <@{user_id}> - <!subteam^S09TJU4TT36>"
+				}
+			]
+		})
+	elif ANNOUNCE_META:
 		blocks.append({
 			"type": "context",
 			"elements": [
 				{
 					"type": "mrkdwn",
 					"text": "<!subteam^S09TJU4TT36>"
+				}
+			]
+		})
+	elif "<" in text:
+		blocks.append({
+			"type": "context",
+			"elements": [
+				{
+					"type": "mrkdwn",
+					"text": f"sent by <@{user_id}>"
 				}
 			]
 		})

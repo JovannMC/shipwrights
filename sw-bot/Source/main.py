@@ -2,7 +2,7 @@ import os, json, summary, threading
 import db, helpers, api, home, relay, ai, msg_blocks, alerts
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE, TICKET_CLAIMED, ALREADY_CLAIMED, CANNOT_CLOSE_OWN, MESSAGE_NOT_RECEIVED, REMINDERS_CHANNEL
+from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE, TICKET_CLAIMED, ALREADY_CLAIMED, CANNOT_CLOSE_OWN, MESSAGE_NOT_RECEIVED, REMINDERS_CHANNEL, META_CHANNEL
 from cache import cache
 
 
@@ -344,8 +344,8 @@ def meta_us(ack, client, respond, body):
     if helpers.is_shipwright(user_id):
         text =  body["text"]
         client.chat_postMessage(
-            channel=REMINDERS_CHANNEL,
-            blocks=msg_blocks.meta_message_blocks(text),
+            channel=META_CHANNEL,
+            blocks=msg_blocks.meta_message_blocks(text, user_id),
             text="Shipwright Meta",
             username="Shipwright Meta"
         )
