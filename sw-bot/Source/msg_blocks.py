@@ -120,7 +120,7 @@ def meta_message_blocks(text, user_id):
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": f"sent by <@{user_id}> - <!subteam^S09TJU4TT36>"
+					"text": f"sent by <@{user_id}> - <!subteam^S0AFZAHP955>"
 				}
 			]
 		})
@@ -130,7 +130,7 @@ def meta_message_blocks(text, user_id):
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": "<!subteam^S09TJU4TT36>"
+					"text": "<!subteam^S0AFZAHP955>"
 				}
 			]
 		})
