@@ -1,4 +1,4 @@
-import json
+import json, re
 from globals import FEEDBACK_MESSAGE, ANNOUNCE_META
 
 
@@ -87,7 +87,11 @@ def meta_votes_message(votes, meta_message_ts):
 	]
 
 def meta_message_blocks(text, user_id):
-	cleaned_text = text.replace("<@", "").replace(">", "").replace("@", "")
+	cleaned_text = re.sub(
+		r'<@[A-Z0-9]+(?:\|([^>]+))?>|<!(?:here|channel|subteam\^[A-Z0-9]+)(?:\|[^>]*)?>',
+		lambda m: m.group(1) if m.group(1) else '',
+		text
+	)
 	blocks = [
 		{
 			"type": "header",
@@ -108,7 +112,7 @@ def meta_message_blocks(text, user_id):
 			"type": "divider"
 		},
 	]
-	if "<" in text and ANNOUNCE_META:
+	if re.search(r'<@[A-Z0-9]+', text) and ANNOUNCE_META:
 		blocks.append({
 			"type": "context",
 			"elements": [
@@ -128,7 +132,7 @@ def meta_message_blocks(text, user_id):
 				}
 			]
 		})
-	elif "<" in text:
+	elif re.search(r'<@[A-Z0-9]+', text):
 		blocks.append({
 			"type": "context",
 			"elements": [
