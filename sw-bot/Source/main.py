@@ -2,7 +2,7 @@ import os, json, summary, threading
 import db, helpers, api, home, relay, ai, msg_blocks, alerts
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE, TICKET_CLAIMED, ALREADY_CLAIMED, CANNOT_CLOSE_OWN, MESSAGE_NOT_RECEIVED, META_CHANNEL, ENVIRONMENT
+from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE, TICKET_CLAIMED, ALREADY_CLAIMED, CANNOT_CLOSE_OWN, MESSAGE_NOT_RECEIVED, META_CHANNEL, ENVIRONMENT, ADMINS
 from cache import cache
 
 
@@ -391,12 +391,7 @@ def modify_votes(ack, body, client):
 def delete_meta(ack, body, client):
     ack()
     user_id = body["user"]["id"]
-    if not helpers.is_shipwright(user_id):
-        client.chat_postEphemeral(
-            channel=META_CHANNEL,
-            user=user_id,
-            text="You don't have permission to delete meta posts."
-        )
+    if user_id not in ADMINS:
         return
     meta_message_ts = body["actions"][0]["value"]
     meta = cache.get_meta_by_meta_ts(meta_message_ts)
