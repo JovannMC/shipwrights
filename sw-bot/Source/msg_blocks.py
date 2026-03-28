@@ -92,6 +92,8 @@ def meta_message_blocks(text, user_id):
 		lambda m: m.group(1) if m.group(1) else '',
 		text
 	)
+	cleaned_text = re.sub(r'\*\*|__', '', cleaned_text)
+	indented_text = '\n'.join(f'>{line}' for line in cleaned_text.split('\n'))
 	blocks = [
 		{
 			"type": "header",
@@ -105,7 +107,7 @@ def meta_message_blocks(text, user_id):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f">*{cleaned_text}*"
+				"text": indented_text
 			}
 		},
 		{
