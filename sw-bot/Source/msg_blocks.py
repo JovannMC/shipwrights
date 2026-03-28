@@ -1,3 +1,4 @@
+import json
 from globals import FEEDBACK_MESSAGE, ANNOUNCE_META
 
 
@@ -26,6 +27,59 @@ def feedback_message(ticket_id):
 				"value": str(ticket_id),
 				"action_id": "submit_feedback"
 			}
+		}
+	]
+
+def meta_votes_message(votes, meta_message_ts):
+	return [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": f"*Anonymous Votes: {votes}*"
+			},
+			"accessory": {
+				"type": "button",
+				"text": {
+					"type": "plain_text",
+					"text": "Delete Post",
+					"emoji": True
+				},
+				"value": meta_message_ts,
+				"action_id": "delete_meta"
+			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "Upvote Message",
+						"emoji": True
+					},
+					"value": json.dumps({"direction": 1, "meta_ts": meta_message_ts}),
+					"action_id": "modify_votes",
+					"style": "primary"
+				}
+			]
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "Downvote Message",
+						"emoji": True
+					},
+					"value": json.dumps({"direction": -1, "meta_ts": meta_message_ts}),
+					"action_id": "modify_votes",
+					"style": "danger"
+				}
+			]
 		}
 	]
 

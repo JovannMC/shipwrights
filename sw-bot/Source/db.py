@@ -672,16 +672,37 @@ def save_meta(text, meta_message_ts=None, votes_message_ts=None):
         cursor.close()
         db.close()
 
-def find_meta_by_vote_ts(votes_message_ts):
+def update_meta_votes(meta_message_ts, delta):
+    db = get_db()
+    if not db:
+        return None
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            "UPDATE meta_posts SET votes = votes + %s WHERE metaMessageTs = %s",
+            (delta, meta_message_ts)
+        )
+        db.commit()
+        cursor.execute("SELECT votes FROM meta_posts WHERE metaMessageTs = %s", (meta_message_ts,))
+        row = cursor.fetchone()
+        return int(row[0]) if row else None
+    except Exception as e:
+        print(f"couldn't update meta votes: {e}")
+        return None
+    finally:
+        cursor.close()
+        db.close()
+
+def find_meta_by_meta_ts(meta_message_ts):
     db = get_db()
     if not db:
         return None
     cursor = db.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT * FROM meta_posts WHERE votesMessageTs = %s", (votes_message_ts,))
+        cursor.execute("SELECT * FROM meta_posts WHERE metaMessageTs = %s", (meta_message_ts,))
         return cursor.fetchone()
     except Exception as e:
-        print(f"couldn't find meta by vote ts: {e}")
+        print(f"couldn't find meta by meta ts: {e}")
         return None
     finally:
         cursor.close()

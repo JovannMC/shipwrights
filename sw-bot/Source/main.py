@@ -342,15 +342,76 @@ def meta_us(ack, client, respond, body):
     ack()
     user_id = body["user_id"]
     if helpers.is_shipwright(user_id):
-        text =  body["text"]
-        client.chat_postMessage(
+        text = body["text"]
+        meta_resp = client.chat_postMessage(
             channel=META_CHANNEL,
             blocks=msg_blocks.meta_message_blocks(text, user_id),
             text="Shipwright Meta",
             username="Shipwright Meta"
         )
+        meta_ts = meta_resp["ts"]
+        vote_resp = client.chat_postMessage(
+            channel=META_CHANNEL,
+            blocks=msg_blocks.meta_votes_message(0, meta_ts),
+            text="Vote on this meta",
+            username="Shipwright Meta"
+        )
+        cache.save_meta(text, meta_ts, vote_resp["ts"])
     else:
         respond("You are not a shipwright!")
+
+@slack_app.action("modify_votes")
+def modify_votes(ack, body, client):
+    ack()
+    user_id = body["user"]["id"]
+    payload = json.loads(body["actions"][0]["value"])
+    meta_message_ts = payload["meta_ts"]
+    delta = payload["direction"]
+    result = cache.add_vote(meta_message_ts, user_id, delta)
+    if result is False:
+        client.chat_postEphemeral(
+            channel=META_CHANNEL,
+            user=user_id,
+            text="You've already voted on this meta!"
+        )
+        return
+    if result is None:
+        client.chat_postEphemeral(
+            channel=META_CHANNEL,
+            user=user_id,
+            text="Something went wrong recording your vote."
+        )
+        return
+    meta = cache.get_meta_by_meta_ts(meta_message_ts)
+    client.chat_update(
+        channel=META_CHANNEL,
+        ts=meta["votes_message_ts"],
+        blocks=msg_blocks.meta_votes_message(result, meta_message_ts),
+        text="Vote on this meta"
+    )
+    client.chat_postEphemeral(
+        channel=META_CHANNEL,
+        user=user_id,
+        text="Your vote has been counted!"
+    )
+
+
+@slack_app.action("delete_meta")
+def delete_meta(ack, body, client):
+    ack()
+    user_id = body["user"]["id"]
+    if user_id not in ["U092F9A8VMY", "U091PP9SN02"]:
+        client.chat_postEphemeral(
+            channel=META_CHANNEL,
+            user=user_id,
+            text="You don't have permission to delete meta posts."
+        )
+        return
+    meta_message_ts = body["actions"][0]["value"]
+    meta = cache.get_meta_by_meta_ts(meta_message_ts)
+    client.chat_delete(channel=META_CHANNEL, ts=meta_message_ts)
+    if meta:
+        client.chat_delete(channel=META_CHANNEL, ts=meta["votes_message_ts"])
 
 def run_bot():
     handler = SocketModeHandler(slack_app, os.getenv("SLACK_APP_TOKEN"))

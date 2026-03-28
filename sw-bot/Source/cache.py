@@ -165,26 +165,42 @@ class Cache:
             self.feedback[ticket_id] = [entry]
 
     def save_meta(self, text, meta_message_ts, votes_message_ts):
-        db.save_feedback(text, meta_message_ts, votes_message_ts)
-        self.metas[votes_message_ts] = {
+        db.save_meta(text, meta_message_ts, votes_message_ts)
+        self.metas[meta_message_ts] = {
                 "votes": 0,
-                "message_ts": meta_message_ts,
+                "votes_message_ts": votes_message_ts,
                 "text": text,
+                "voters": set(),
         }
 
-    def get_meta_by_vote_ts(self, votes_message_ts):
-        if votes_message_ts in self.metas.keys():
-            return self.metas[votes_message_ts]
+    def get_meta_by_meta_ts(self, meta_message_ts):
+        if meta_message_ts in self.metas.keys():
+            return self.metas[meta_message_ts]
         else:
-            meta_data = db.find_meta_by_vote_ts(votes_message_ts)
+            meta_data = db.find_meta_by_meta_ts(meta_message_ts)
             if meta_data:
-                self.metas[votes_message_ts] = {
+                self.metas[meta_message_ts] = {
                     "votes": meta_data["votes"],
-                    "message_ts": meta_data["metaMessageTs"],
+                    "votes_message_ts": meta_data["votesMessageTs"],
                     "text": meta_data["text"],
+                    "voters": set(),
                 }
-                return meta_data
+                return self.metas[meta_message_ts]
             else:
                 print("[Urgent] Error occured while fetching meta data from db.")
+                return None
+
+    def add_vote(self, meta_message_ts, user_id, delta):
+        meta = self.get_meta_by_meta_ts(meta_message_ts)
+        if not meta:
+            return None
+        if user_id in meta["voters"]:
+            return False
+        new_count = db.update_meta_votes(meta_message_ts, delta)
+        if new_count is None:
+            return None
+        meta["voters"].add(user_id)
+        meta["votes"] = new_count
+        return new_count
 
 cache = Cache()
