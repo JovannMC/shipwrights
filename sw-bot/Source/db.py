@@ -652,3 +652,37 @@ def get_daily_ticket_stats():
     finally:
         cursor.close()
         db.close()
+
+def save_meta(text, meta_message_ts=None, votes_message_ts=None):
+    db = get_db()
+    if not db:
+        return None
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO meta_posts (text, metaMessageTs, votesMessageTs) VALUES (%s, %s, %s)",
+            (text, meta_message_ts, votes_message_ts)
+        )
+        db.commit()
+        return cursor.lastrowid
+    except Exception as e:
+        print(f"couldn't save meta: {e}")
+        return None
+    finally:
+        cursor.close()
+        db.close()
+
+def find_meta_by_vote_ts(votes_message_ts):
+    db = get_db()
+    if not db:
+        return None
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM meta_posts WHERE votesMessageTs = %s", (votes_message_ts,))
+        return cursor.fetchone()
+    except Exception as e:
+        print(f"couldn't find meta by vote ts: {e}")
+        return None
+    finally:
+        cursor.close()
+        db.close()

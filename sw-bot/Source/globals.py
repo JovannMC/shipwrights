@@ -6,7 +6,7 @@ load_dotenv()
 
 client = WebClient(token=os.getenv('SLACK_BOT_TOKEN'))
 REMINDERS_CHANNEL = os.getenv("REMINDER_CHANNEL_ID", "C09TTRZH94Z")
-ANNOUNCE_META = os.getenv("ANNOUNCE_META", 0)
+ANNOUNCE_META = os.getenv("ANNOUNCE_META", False)
 META_CHANNEL = os.getenv("META_CHANNEL_ID")
 DASH_URL = os.getenv("DASHBOARD_URL", "http://localhost:3000")
 API_KEY = os.getenv("API_KEY")
@@ -21,6 +21,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_USER = os.getenv("DB_USER")
 DB_PORT = int(os.getenv("DB_PORT", 3306))
 DB_HOST = os.getenv("DB_HOST")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "PRODUCTION")
 
 MACROS = {
     "fraud": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward any related questions to <@U091HC53CE8>.",

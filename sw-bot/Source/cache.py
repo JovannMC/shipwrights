@@ -7,6 +7,7 @@ class Cache:
         self.ticket_users = {}
         self.tickets = {}
         self.feedback = {}
+        self.metas = {}
         self.shipwrights = []
         self.ignorable = []
         self.metrics = {
@@ -162,5 +163,28 @@ class Cache:
             self.feedback[ticket_id].append(entry)
         else:
             self.feedback[ticket_id] = [entry]
+
+    def save_meta(self, text, meta_message_ts, votes_message_ts):
+        db.save_feedback(text, meta_message_ts, votes_message_ts)
+        self.metas[votes_message_ts] = {
+                "votes": 0,
+                "message_ts": meta_message_ts,
+                "text": text,
+        }
+
+    def get_meta_by_vote_ts(self, votes_message_ts):
+        if votes_message_ts in self.metas.keys():
+            return self.metas[votes_message_ts]
+        else:
+            meta_data = db.find_meta_by_vote_ts(votes_message_ts)
+            if meta_data:
+                self.metas[votes_message_ts] = {
+                    "votes": meta_data["votes"],
+                    "message_ts": meta_data["metaMessageTs"],
+                    "text": meta_data["text"],
+                }
+                return meta_data
+            else:
+                print("[Urgent] Error occured while fetching meta data from db.")
 
 cache = Cache()

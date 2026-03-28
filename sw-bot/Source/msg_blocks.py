@@ -30,6 +30,7 @@ def feedback_message(ticket_id):
 	]
 
 def meta_message_blocks(text, user_id):
+	cleaned_text = text.replace("<@", "").replace(">", "").replace("@", "")
 	blocks = [
 		{
 			"type": "header",
@@ -43,7 +44,7 @@ def meta_message_blocks(text, user_id):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f">*{text}*"
+				"text": f">*{cleaned_text}*"
 			}
 		},
 		{

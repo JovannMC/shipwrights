@@ -2,7 +2,7 @@ import os, json, summary, threading
 import db, helpers, api, home, relay, ai, msg_blocks, alerts
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE, TICKET_CLAIMED, ALREADY_CLAIMED, CANNOT_CLOSE_OWN, MESSAGE_NOT_RECEIVED, REMINDERS_CHANNEL, META_CHANNEL
+from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE, TICKET_CLAIMED, ALREADY_CLAIMED, CANNOT_CLOSE_OWN, MESSAGE_NOT_RECEIVED, META_CHANNEL, ENVIRONMENT
 from cache import cache
 
 
@@ -337,7 +337,7 @@ def rating_form(ack, view):
     comment = view["state"]["values"]["comment_block"]["plain_text_input-action"]["value"]
     cache.save_feedback(ticket_id, rating, comment)
 
-@slack_app.command("/metasw")
+@slack_app.command("/metasw" if ENVIRONMENT == "PRODUCTION" else "/metastaging")
 def meta_us(ack, client, respond, body):
     ack()
     user_id = body["user_id"]
