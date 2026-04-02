@@ -356,7 +356,7 @@ async function fetchList(filters: Filters) {
 }
 
 // Cached stats fetcher - independent of sortBy
-async function getStats(lbMode: string) {
+export async function getStats(lbMode: string) {
   const key = genKey('certs-stats', { lbMode })
   return cache(key, 15, () => fetchStats(lbMode))
 }

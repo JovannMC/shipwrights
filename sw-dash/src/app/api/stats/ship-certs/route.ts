@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCerts } from '@/lib/certs'
+import { getStats } from '@/lib/certs'
 import { prisma } from '@/lib/db'
 import { reportError } from '@/lib/sentry-server'
 import { safeCompare } from '@/lib/utils'
@@ -22,30 +22,34 @@ export async function GET(req: NextRequest) {
     npsWindowStart.setDate(npsWindowStart.getDate() - 7 * 52)
     npsWindowStart.setHours(0, 0, 0, 0)
     const [
-      data,
+      statsData,
       pendingCerts,
       reviewStats,
       shipStats,
       metricsHistory,
       npsWeeklyStats,
-      npsOverallAvg,
       allTicketFeedback,
+      rejectionReasons,
+      stickerRequests,
     ] = await Promise.all([
-      getCerts({}),
+      getStats('weekly'),
       prisma.shipCert.findMany({
         where: { status: 'pending', yswsReturnedAt: null },
         orderBy: { createdAt: 'asc' },
         select: { createdAt: true },
       }),
-      prisma.$queryRaw<{ date: Date; avgWaitSeconds: number | null; reviewCount: bigint }[]>`
+      prisma.$queryRaw<
+        { date: Date; status: string; avgWaitSeconds: number | null; count: bigint }[]
+      >`
         SELECT 
           DATE(reviewCompletedAt) as date,
+          status,
           AVG(TIMESTAMPDIFF(SECOND, createdAt, reviewCompletedAt)) as avgWaitSeconds,
-          COUNT(*) as reviewCount
+          COUNT(*) as count
         FROM ship_certs
         WHERE reviewCompletedAt >= ${windowStart}
           AND status IN ('approved', 'rejected')
-        GROUP BY DATE(reviewCompletedAt)
+        GROUP BY DATE(reviewCompletedAt), status
         ORDER BY date ASC
       `,
       prisma.$queryRaw<{ date: Date; shipCount: bigint }[]>`
@@ -80,11 +84,6 @@ export async function GET(req: NextRequest) {
         GROUP BY DATE_FORMAT(createdAt, '%x-W%v')
         ORDER BY week ASC
       `,
-      prisma.ticketFeedback.aggregate({
-        _avg: {
-          rating: true,
-        },
-      }),
       prisma.ticketFeedback.findMany({
         orderBy: { createdAt: 'desc' },
         select: {
@@ -95,17 +94,27 @@ export async function GET(req: NextRequest) {
           createdAt: true,
         },
       }),
+      prisma.$queryRaw<{ rejectionReason: string | null; count: bigint }[]>`
+        SELECT
+          rejectionReason,
+          COUNT(*) as count
+        FROM ship_certs
+        WHERE status = 'rejected'
+        GROUP BY rejectionReason
+        ORDER BY count DESC
+      `,
+      prisma.stickerRequest.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+          ftProjectId: true,
+          requester: { select: { ftuid: true } },
+        },
+      }),
     ])
 
-    let oldestWait = '-'
     let medianQueueTime = '-'
 
     if (pendingCerts.length > 0) {
-      const oldestDiff = Date.now() - pendingCerts[0].createdAt.getTime()
-      const oldestDays = Math.floor(oldestDiff / (1000 * 60 * 60 * 24))
-      const oldestHours = Math.floor((oldestDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      oldestWait = `${oldestDays}d ${oldestHours}h`
-
       const waitTimes = pendingCerts
         .map((c: { createdAt: Date }) => Date.now() - c.createdAt.getTime())
         .sort((a: number, b: number) => a - b)
@@ -123,6 +132,9 @@ export async function GET(req: NextRequest) {
     const reviewsPerDay: Record<string, number> = {}
     const shipsPerDay: Record<string, number> = {}
     const pendingPerDay: Record<string, number> = {}
+    const approvedPerDay: Record<string, number> = {}
+    const rejectedPerDay: Record<string, number> = {}
+    const totalDecisionsPerDay: Record<string, number> = {}
 
     for (let i = 29; i >= 0; i--) {
       const day = new Date(now)
@@ -133,14 +145,34 @@ export async function GET(req: NextRequest) {
       reviewsPerDay[dateKey] = 0
       shipsPerDay[dateKey] = 0
       pendingPerDay[dateKey] = 0
+      approvedPerDay[dateKey] = 0
+      rejectedPerDay[dateKey] = 0
+      totalDecisionsPerDay[dateKey] = 0
     }
 
+    const avgQueueAccum: Record<string, { totalSeconds: number; count: number }> = {}
     for (const row of reviewStats) {
       const dateKey = new Date(row.date).toISOString().split('T')[0]
-      if (dateKey in avgQueue) {
-        avgQueue[dateKey] = row.avgWaitSeconds != null ? Math.floor(row.avgWaitSeconds) : 0
-        reviewsPerDay[dateKey] = Number(row.reviewCount)
+      const count = Number(row.count)
+
+      if (dateKey in approvedPerDay) {
+        if (row.status === 'approved') approvedPerDay[dateKey] = count
+        else rejectedPerDay[dateKey] = count
+        totalDecisionsPerDay[dateKey] += count
       }
+
+      if (dateKey in avgQueue) {
+        reviewsPerDay[dateKey] += count
+        if (row.avgWaitSeconds != null) {
+          if (!avgQueueAccum[dateKey]) avgQueueAccum[dateKey] = { totalSeconds: 0, count: 0 }
+          avgQueueAccum[dateKey].totalSeconds += row.avgWaitSeconds * count
+          avgQueueAccum[dateKey].count += count
+        }
+      }
+    }
+
+    for (const [dateKey, accum] of Object.entries(avgQueueAccum)) {
+      avgQueue[dateKey] = accum.count > 0 ? Math.floor(accum.totalSeconds / accum.count) : 0
     }
 
     for (const row of shipStats) {
@@ -150,7 +182,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    let currentPending = data.stats.pending
+    let currentPending = statsData.stats.pending
     for (let i = 0; i < 30; i++) {
       const day = new Date(now)
       day.setDate(day.getDate() - i)
@@ -169,23 +201,48 @@ export async function GET(req: NextRequest) {
       weeklyNps[row.week] = Number(row.avgRating) || 0
     }
 
+    const rejectionReasonCounts: Record<string, number> = {}
+    for (const row of rejectionReasons) {
+      const reason = row.rejectionReason ?? 'unknown'
+      rejectionReasonCounts[reason] = Number(row.count)
+    }
+
+    const makeTheirDayProjects = [
+      ...new Map(
+        stickerRequests.map((r) => [
+          r.ftProjectId,
+          { ftProjectId: r.ftProjectId, requesterFtuid: r.requester.ftuid ?? null },
+        ])
+      ).values(),
+    ]
+
+    const overallNpsMean =
+      allTicketFeedback.length > 0
+        ? allTicketFeedback.reduce((sum, f) => sum + f.rating, 0) / allTicketFeedback.length
+        : 0
+
     return NextResponse.json({
-      totalJudged: data.stats.totalJudged,
-      approved: data.stats.approved,
-      rejected: data.stats.rejected,
-      approvalRate: data.stats.approvalRate,
+      totalJudged: statsData.stats.totalJudged,
+      approved: statsData.stats.approved,
+      rejected: statsData.stats.rejected,
+      approvalRate: statsData.stats.approvalRate,
       avgQueueTime: avgQueue,
       medianQueueTime: medianQueueTime,
-      decisionsToday: data.stats.decisionsToday,
-      newShipsToday: data.stats.newShipsToday,
-      oldestInQueue: oldestWait,
+      decisionsToday: statsData.stats.decisionsToday,
+      newShipsToday: statsData.stats.newShipsToday,
+      oldestInQueue: statsData.stats.oldestInQueue,
       reviewsPerDay: reviewsPerDay,
       shipsPerDay: shipsPerDay,
       pendingPerDay: pendingPerDay,
       metricsHistory: metricsHistory,
-      overallNpsMean: npsOverallAvg._avg.rating || 0,
+      overallNpsMean: overallNpsMean,
       weeklyNps: weeklyNps,
       allTicketFeedback: allTicketFeedback,
+      approvedPerDay: approvedPerDay,
+      rejectedPerDay: rejectedPerDay,
+      totalDecisionsPerDay: totalDecisionsPerDay,
+      rejectionReasonCounts: rejectionReasonCounts,
+      makeTheirDayProjects: makeTheirDayProjects,
     })
   } catch (err) {
     reportError(err instanceof Error ? err : new Error(String(err)), { endpoint: 'ship-certs' })
