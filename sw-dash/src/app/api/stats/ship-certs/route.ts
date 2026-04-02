@@ -94,14 +94,16 @@ export async function GET(req: NextRequest) {
           createdAt: true,
         },
       }),
-      prisma.$queryRaw<{ rejectionReason: string | null; count: bigint }[]>`
+      prisma.$queryRaw<{ date: Date; rejectionReason: string | null; count: bigint }[]>`
         SELECT
+          DATE(reviewCompletedAt) as date,
           rejectionReason,
           COUNT(*) as count
         FROM ship_certs
         WHERE status = 'rejected'
-        GROUP BY rejectionReason
-        ORDER BY count DESC
+          AND reviewCompletedAt >= ${windowStart}
+        GROUP BY DATE(reviewCompletedAt), rejectionReason
+        ORDER BY date ASC
       `,
       prisma.stickerRequest.findMany({
         orderBy: { createdAt: 'desc' },
@@ -201,10 +203,12 @@ export async function GET(req: NextRequest) {
       weeklyNps[row.week] = Number(row.avgRating) || 0
     }
 
-    const rejectionReasonCounts: Record<string, number> = {}
+    const rejectionReasonsByDay: Record<string, Record<string, number>> = {}
     for (const row of rejectionReasons) {
+      const dateKey = new Date(row.date).toISOString().split('T')[0]
       const reason = row.rejectionReason ?? 'unknown'
-      rejectionReasonCounts[reason] = Number(row.count)
+      if (!rejectionReasonsByDay[dateKey]) rejectionReasonsByDay[dateKey] = {}
+      rejectionReasonsByDay[dateKey][reason] = Number(row.count)
     }
 
     const makeTheirDayProjects = [
@@ -241,7 +245,7 @@ export async function GET(req: NextRequest) {
       approvedPerDay: approvedPerDay,
       rejectedPerDay: rejectedPerDay,
       totalDecisionsPerDay: totalDecisionsPerDay,
-      rejectionReasonCounts: rejectionReasonCounts,
+      rejectionReasonsByDay: rejectionReasonsByDay,
       makeTheirDayProjects: makeTheirDayProjects,
     })
   } catch (err) {
