@@ -38,7 +38,9 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: 'asc' },
         select: { createdAt: true },
       }),
-      prisma.$queryRaw<{ date: Date; status: string; avgWaitSeconds: number | null; count: bigint }[]>`
+      prisma.$queryRaw<
+        { date: Date; status: string; avgWaitSeconds: number | null; count: bigint }[]
+      >`
         SELECT 
           DATE(reviewCompletedAt) as date,
           status,
@@ -207,7 +209,10 @@ export async function GET(req: NextRequest) {
 
     const makeTheirDayProjects = [
       ...new Map(
-        stickerRequests.map((r) => [r.ftProjectId, { ftProjectId: r.ftProjectId, requesterFtuid: r.requester.ftuid ?? null }])
+        stickerRequests.map((r) => [
+          r.ftProjectId,
+          { ftProjectId: r.ftProjectId, requesterFtuid: r.requester.ftuid ?? null },
+        ])
       ).values(),
     ]
 
