@@ -43,7 +43,9 @@ def msg(event):
             return
         relay.edit_message(event)
         return
-    worker.enqueue_sticky_message_update()
+    # worker.enqueue_sticky_message_update()
+    if not event.get("text") and event.get("attachments", [{}])[0].get("is_share", False):
+        event["text"] = event.get("attachments", [{}])[0].get("text")
     if channel == USER_CHANNEL:
         if relay.handle_client_reply(event):
             pass
