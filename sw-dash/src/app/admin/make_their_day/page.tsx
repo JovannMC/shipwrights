@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react'
 interface StickerReq {
   id: number
   ftProjectId: string
+  shipped: boolean
+  shippedAt: string | null
   createdAt: string
   requester: { id: number; username: string; avatar: string | null }
 }
@@ -16,6 +18,7 @@ export default function MakeTheirDay() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [showFull, setShowFull] = useState(false)
+  const [myRole, setMyRole] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/sticker_requests')
@@ -24,7 +27,24 @@ export default function MakeTheirDay() {
         setRequests(data.requests)
         setLoading(false)
       })
+    fetch('/api/me')
+      .then((r) => r.json())
+      .then((data) => setMyRole(data.role))
   }, [])
+
+  const canShip = myRole === 'megawright' || myRole === 'hq'
+
+  async function markShipped(id: number, shipped: boolean) {
+    const res = await fetch(`/api/admin/sticker_requests/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shipped }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)))
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -144,18 +164,29 @@ export default function MakeTheirDay() {
               {requests.map((r) => (
                 <div
                   key={r.id}
-                  className="bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+                  className={`border rounded-xl px-4 py-3 flex items-center justify-between gap-3 ${r.shipped ? 'bg-green-900/20 border-green-800/50' : 'bg-zinc-900/60 border-zinc-800'}`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-pink-400 font-mono text-sm truncate">
                       {r.ftProjectId}
                     </span>
+                    {r.shipped && (
+                      <span className="text-green-400 font-mono text-xs shrink-0">shipped!</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-zinc-500 text-xs font-mono">{r.requester.username}</span>
                     <span className="text-zinc-600 text-xs font-mono">
                       {new Date(r.createdAt).toLocaleDateString()}
                     </span>
+                    {canShip && (
+                      <button
+                        onClick={() => markShipped(r.id, !r.shipped)}
+                        className={`font-mono text-xs px-2 py-1 rounded-lg border transition-all ${r.shipped ? 'border-zinc-700 text-zinc-500 hover:text-red-400 hover:border-red-800' : 'border-green-800 text-green-500 hover:text-green-300 hover:border-green-600'}`}
+                      >
+                        {r.shipped ? 'unship' : 'mark shipped'}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

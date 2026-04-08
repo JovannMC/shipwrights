@@ -413,6 +413,8 @@ model StickerRequest {
   id          Int      @id @default(autoincrement())
   ftProjectId String
   requestedBy Int
+  shipped     Boolean  @default(false)
+  shippedAt   DateTime?
   createdAt   DateTime @default(now())
   requester   User     @relation(fields: [requestedBy], references: [id])
 
