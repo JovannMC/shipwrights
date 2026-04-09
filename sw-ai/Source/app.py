@@ -189,7 +189,7 @@ def check_project():
         timeout=10,
     )
 
-    return jsonify(response["message"]), 200
+    return jsonify(response.get("content", {})), 200
 
 if __name__ == "__main__":
     try:
