@@ -5,3 +5,7 @@ public
 dist
 .env*
 *.lock
+pnpm-lock.yaml
+*.min.js
+*.min.css
+*.log
