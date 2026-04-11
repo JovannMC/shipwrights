@@ -8,7 +8,7 @@ PORT = 45200
 OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY")
 
 logging.basicConfig(
-    level=logging.ERROR,
+    level=logging.INFO,
     format='[%(asctime)s] %(levelname)s: %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -615,6 +615,9 @@ def format_submission_validation_message(readme, readme_link, demo_link, repo_ur
             - Users often add env based install guides and guides on how to compile in their readme, That should not mean an automatic rejection if an exe is required. Users often provide both a ready exe and a guide to compile/install. This also applies to webapps as often live applications are included too.
             - For simple issues you should flag them as warnings not errors.
             - You should not push users to include usage instructions for simple webapps.
+            - Project README and project repo MUST be on the same repository.
+            - You should always return a summary no matter what for logging and debugging purposes.
+            - If a readme is not raw you MUST not count the submission as valid.
         
         #AI Declaration
             - Users MUST declare if their readme was AI generated.
