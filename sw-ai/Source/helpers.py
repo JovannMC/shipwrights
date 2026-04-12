@@ -571,8 +571,8 @@ def format_submission_validation_message(readme, readme_link, demo_link, repo_ur
 
         ## Output Format
         Return ONLY a valid JSON object - no markdown, no code fences, no extra text.
-        {{"valid": true|false, "flags": [{{"field": "demo|readme|description|declaration|updated|releases", "severity": "error|warning|suggestion", "message": "Friendly message addressed to the shipper"}}], "summary": "Overall message to the shipper"}}
-        Set valid=false if ANY flag has severity "error". Set valid=true if only warnings or suggestions exist. Always include a summary.
+        {{"valid": true|false, "flags": [{{"field": "demo|readme|description|declaration|updated|releases", "severity": "error|warning|suggestion", "message": "Friendly message addressed to the shipper"}}]}}
+        Set valid=false if ANY flag has severity "error". Set valid=true if only warnings or suggestions exist.
 
         ## Hard Rejection Triggers (severity: "error" -> valid=false)
         Flag as error if ANY of these apply:
@@ -665,7 +665,7 @@ def format_submission_validation_message(readme, readme_link, demo_link, repo_ur
             - AI declaration: {ai_declaration}
 
         Return ONLY valid JSON, no markdown, no code blocks:
-        {{"valid": true|false, "flags": [{{"field": "demo|readme|description|declaration|updated|releases", "severity": "error|warning|suggestion", "message": "Friendly message to the shipper"}}], "summary": "Overall message to the shipper"}}"""
+        {{"valid": true|false, "flags": [{{"field": "demo|readme|description|declaration|updated|releases", "severity": "error|warning|suggestion", "message": "Friendly message to the shipper"}}]}}"""
 
 def get_ai_response(content=None, tokens=1000, timeout=60, ai_model="google/gemini-3-flash-preview", keys=()):
     try:
