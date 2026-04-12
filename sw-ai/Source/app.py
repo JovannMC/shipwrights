@@ -186,7 +186,8 @@ def check_project():
             is_updated=is_updated,
             description=project_description,
         ),
-        timeout=10,
+        timeout=60,
+        tokens=4000,
     )
     logger.info(f"AI response: {response}")
     return jsonify(response.get("content", {})), 200
