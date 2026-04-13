@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    if (existing) {
+    if (existing && ftType !== 'reship') {
       await log({
         action: 'ft_webhook_blocked',
         status: 403,
