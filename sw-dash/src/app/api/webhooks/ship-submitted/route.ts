@@ -96,14 +96,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'missing description and links' }, { status: 400 })
     }
 
+    const isReship = ftType === 'reship'
     const existing = await prisma.shipCert.findFirst({
       where: {
         ftProjectId: String(ftProjectId),
-        status: { in: ['pending', 'approved'] },
+        status: { in: isReship ? ['pending'] : ['pending', 'approved'] },
       },
     })
 
-    if (existing && ftType !== 'reship') {
+    if (existing) {
       await log({
         action: 'ft_webhook_blocked',
         status: 403,
