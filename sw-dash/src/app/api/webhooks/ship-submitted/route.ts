@@ -4,6 +4,7 @@ import { bust } from '@/lib/cache'
 import { log } from '@/lib/log'
 import { checkType } from '@/lib/typecheck'
 import { safeCompare } from '@/lib/utils'
+import { detectReshipAnomaly } from '@/lib/reship-anomaly'
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
@@ -124,16 +125,11 @@ export async function POST(request: NextRequest) {
     }
 
     let previousVideoUrl: string | null = null
+    let needsAdminReview = false
     if (ftType === 'reship') {
-      const prev = await prisma.shipCert.findFirst({
-        where: {
-          ftProjectId: String(ftProjectId),
-          proofVideoUrl: { not: null },
-        },
-        orderBy: { reviewCompletedAt: 'desc' },
-        select: { proofVideoUrl: true },
-      })
-      previousVideoUrl = prev?.proofVideoUrl || null
+      const detection = await detectReshipAnomaly(String(ftProjectId))
+      previousVideoUrl = detection.previousVideoUrl
+      needsAdminReview = detection.needsAdminReview
     }
 
     const cert = await prisma.shipCert.create({
@@ -152,6 +148,7 @@ export async function POST(request: NextRequest) {
           ? `${Math.floor(metadata.devTime / 3600)}h ${Math.floor((metadata.devTime % 3600) / 60)}m`
           : null,
         proofVideoUrl: previousVideoUrl,
+        needsAdminReview,
         status: 'pending',
       },
     })

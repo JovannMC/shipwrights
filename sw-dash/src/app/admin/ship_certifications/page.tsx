@@ -28,6 +28,7 @@ export default async function Ships() {
             leaderboard: data.leaderboard,
             types: data.typeCounts,
           }}
+          isAdmin={can(user.role, PERMS.certs_admin)}
         />
       </div>
     </main>

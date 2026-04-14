@@ -188,6 +188,8 @@ model ShipCert {
   yswsReturnedBy   String?
   yswsReturnedAt   DateTime?
 
+  needsAdminReview Boolean @default(false)
+
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   reviewer    User?        @relation(fields: [reviewerId], references: [id])

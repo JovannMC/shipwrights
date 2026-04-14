@@ -16,6 +16,7 @@ interface Props {
     leaderboard: Reviewer[]
     types: TypeCount[]
   }
+  isAdmin?: boolean
 }
 
 const fmtTime = (secs: number) => {
@@ -133,11 +134,13 @@ function MultiSelect({
   )
 }
 
-export function CertsView({ initial }: Props) {
+export function CertsView({ initial, isAdmin = false }: Props) {
   const params = useSearchParams()
   const router = useRouter()
   const [ftType, setFtType] = useState(params.get('ftType') || 'all')
-  const [status, setStatus] = useState(params.get('status') || 'pending')
+  const rawStatus =
+    params.get('adminReview') === 'true' ? 'admin' : params.get('status') || 'pending'
+  const [status, setStatus] = useState(rawStatus === 'admin' && !isAdmin ? 'pending' : rawStatus)
   const [sortBy, setSortBy] = useState(params.get('sortBy') || 'oldest')
   const [search, setSearch] = useState(params.get('search') || '')
   const [from, setFrom] = useState(params.get('from') || '')
@@ -167,7 +170,11 @@ export function CertsView({ initial }: Props) {
       const p = new URLSearchParams()
       if (selectedTypes.length > 0) p.set('type', selectedTypes.join(','))
       if (ftType !== 'all') p.set('ftType', ftType)
-      if (status !== 'all') p.set('status', status)
+      if (status === 'admin') {
+        p.set('adminReview', 'true')
+      } else if (status !== 'all') {
+        p.set('status', status)
+      }
       p.set('sortBy', sortBy)
       p.set('lbMode', lbMode)
       if (search) p.set('search', search)
@@ -209,7 +216,11 @@ export function CertsView({ initial }: Props) {
     const p = new URLSearchParams()
     if (selectedTypes.length > 0) p.set('type', selectedTypes.join(','))
     if (ftType !== 'all') p.set('ftType', ftType)
-    if (status !== 'pending') p.set('status', status)
+    if (status === 'admin') {
+      p.set('adminReview', 'true')
+    } else if (status !== 'pending') {
+      p.set('status', status)
+    }
     if (sortBy !== 'oldest') p.set('sortBy', sortBy)
     if (search) p.set('search', search)
     if (from) p.set('from', from)
@@ -438,6 +449,9 @@ export function CertsView({ initial }: Props) {
               { val: 'approved', label: `Approved (${stats.approved})` },
               { val: 'rejected', label: `Rejected (${stats.rejected})` },
               { val: 'all', label: `All (${stats.totalJudged})` },
+              ...(isAdmin
+                ? [{ val: 'admin', label: `Admin Review (${stats.adminReview ?? 0})` }]
+                : []),
             ]}
             onChange={setStatus}
           />

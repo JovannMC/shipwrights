@@ -212,6 +212,24 @@ export function Form({ shipId }: Props) {
           </div>
         </div>
 
+        {cert.needsAdminReview && (
+          <div className="bg-gradient-to-br from-red-950/70 to-red-900/40 border-4 border-red-600/70 rounded-3xl p-4 md:p-5 mb-4 md:mb-6 shadow-xl shadow-red-950/30">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl md:text-3xl shrink-0">⚠️</span>
+              <div>
+                <h3 className="text-red-300 font-mono text-base md:text-lg font-bold mb-1">
+                  Admin review — reship anomaly
+                </h3>
+                <p className="text-red-100/90 font-mono text-sm">
+                  This reship didn&apos;t pass the standard checks (no prior approval found in our
+                  system, or the most recent prior cert was a rejection). Regular reviewers cannot
+                  see this.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {cert.ftType === 'reship' && (
           <div className="bg-gradient-to-br from-cyan-950/60 to-cyan-900/30 border-4 border-cyan-600/60 rounded-3xl p-4 md:p-5 mb-4 md:mb-6 shadow-xl shadow-cyan-950/30">
             <div className="flex items-start gap-3">

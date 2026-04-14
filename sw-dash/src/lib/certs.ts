@@ -10,12 +10,14 @@ interface Filters {
   from?: string | null
   to?: string | null
   search?: string | null
+  adminReview?: boolean
 }
 
 type StatsRow = {
   approved: bigint
   rejected: bigint
   pending: bigint
+  adminReview: bigint
   decisionsToday: bigint
   newShipsToday: bigint
   decisionsYesterday: bigint
@@ -94,22 +96,24 @@ async function fetchStats(lbMode: string) {
       ORDER BY date ASC
     `,
 
-    // Stats + queue in ONE SQL query
+    // Stats + queue in ONE SQL query — excludes admin-review certs so the
+    // Status dropdown counts match the regular-queue list the user sees.
     prisma.$queryRaw<StatsRow[]>`
       SELECT
-        SUM(status = 'approved') AS approved,
-        SUM(status = 'rejected') AS rejected,
-        SUM(status = 'pending') AS pending,
-        SUM(reviewCompletedAt IS NOT NULL AND reviewCompletedAt >= ${today}) AS decisionsToday,
-        SUM(createdAt >= ${today}) AS newShipsToday,
-        SUM(reviewCompletedAt IS NOT NULL AND reviewCompletedAt >= ${yesterday} AND reviewCompletedAt < ${today}) AS decisionsYesterday,
-        SUM(createdAt >= ${yesterday} AND createdAt < ${today}) AS newShipsYesterday,
-        SUM(status = 'approved' AND reviewCompletedAt IS NOT NULL AND reviewCompletedAt < ${today}) AS approvedBeforeToday,
-        SUM(status = 'rejected' AND reviewCompletedAt IS NOT NULL AND reviewCompletedAt < ${today}) AS rejectedBeforeToday,
-        (SELECT COUNT(*) FROM ship_certs WHERE status = 'pending' AND yswsReturnedAt IS NULL) AS queueCount,
-        (SELECT id FROM ship_certs WHERE status = 'pending' AND yswsReturnedAt IS NULL ORDER BY createdAt ASC LIMIT 1) AS queueOldestId,
-        (SELECT MIN(createdAt) FROM ship_certs WHERE status = 'pending' AND yswsReturnedAt IS NULL) AS queueOldestCreatedAt,
-        (SELECT AVG(TIMESTAMPDIFF(SECOND, createdAt, ${now})) FROM ship_certs WHERE status = 'pending' AND yswsReturnedAt IS NULL) AS avgWaitSeconds
+        SUM(status = 'approved' AND needsAdminReview = false) AS approved,
+        SUM(status = 'rejected' AND needsAdminReview = false) AS rejected,
+        SUM(status = 'pending' AND needsAdminReview = false) AS pending,
+        SUM(status = 'pending' AND needsAdminReview = true) AS adminReview,
+        SUM(reviewCompletedAt IS NOT NULL AND reviewCompletedAt >= ${today} AND needsAdminReview = false) AS decisionsToday,
+        SUM(createdAt >= ${today} AND needsAdminReview = false) AS newShipsToday,
+        SUM(reviewCompletedAt IS NOT NULL AND reviewCompletedAt >= ${yesterday} AND reviewCompletedAt < ${today} AND needsAdminReview = false) AS decisionsYesterday,
+        SUM(createdAt >= ${yesterday} AND createdAt < ${today} AND needsAdminReview = false) AS newShipsYesterday,
+        SUM(status = 'approved' AND reviewCompletedAt IS NOT NULL AND reviewCompletedAt < ${today} AND needsAdminReview = false) AS approvedBeforeToday,
+        SUM(status = 'rejected' AND reviewCompletedAt IS NOT NULL AND reviewCompletedAt < ${today} AND needsAdminReview = false) AS rejectedBeforeToday,
+        (SELECT COUNT(*) FROM ship_certs WHERE status = 'pending' AND yswsReturnedAt IS NULL AND needsAdminReview = false) AS queueCount,
+        (SELECT id FROM ship_certs WHERE status = 'pending' AND yswsReturnedAt IS NULL AND needsAdminReview = false ORDER BY createdAt ASC LIMIT 1) AS queueOldestId,
+        (SELECT MIN(createdAt) FROM ship_certs WHERE status = 'pending' AND yswsReturnedAt IS NULL AND needsAdminReview = false) AS queueOldestCreatedAt,
+        (SELECT AVG(TIMESTAMPDIFF(SECOND, createdAt, ${now})) FROM ship_certs WHERE status = 'pending' AND yswsReturnedAt IS NULL AND needsAdminReview = false) AS avgWaitSeconds
       FROM ship_certs
     `,
 
@@ -154,6 +158,7 @@ async function fetchStats(lbMode: string) {
   const approved = toNum(statsRow?.approved)
   const rejected = toNum(statsRow?.rejected)
   const pending = toNum(statsRow?.pending)
+  const adminReview = toNum(statsRow?.adminReview)
   const totalJudged = approved + rejected
   const approvalRate = totalJudged > 0 ? Number(((approved / totalJudged) * 100).toFixed(1)) : 0
 
@@ -249,6 +254,7 @@ async function fetchStats(lbMode: string) {
       approved,
       rejected,
       pending,
+      adminReview,
       approvalRate,
       avgQueueTime,
       oldestInQueue,
@@ -272,6 +278,7 @@ async function fetchList(filters: Filters) {
   if (type && type.length > 0) where.projectType = { in: type }
   if (filters.ftType && filters.ftType !== 'all') where.ftType = filters.ftType
   if (status && status !== 'all') where.status = status
+  where.needsAdminReview = filters.adminReview === true
   if (filters.from || filters.to) {
     where.createdAt = {
       ...(filters.from ? { gte: new Date(filters.from) } : {}),
@@ -305,6 +312,7 @@ async function fetchList(filters: Filters) {
         yswsReturnReason: true,
         yswsReturnedBy: true,
         customBounty: true,
+        needsAdminReview: true,
         reviewer: { select: { id: true, username: true, avatar: true } },
         claimer: { select: { id: true, username: true } },
       },
@@ -312,7 +320,10 @@ async function fetchList(filters: Filters) {
 
     prisma.shipCert.groupBy({
       by: ['projectType'],
-      where: status && status !== 'all' ? { status } : {},
+      where: {
+        needsAdminReview: filters.adminReview === true,
+        ...(status && status !== 'all' ? { status } : {}),
+      },
       _count: true,
     }),
   ])
@@ -349,6 +360,7 @@ async function fetchList(filters: Filters) {
         yswsReturnReason: c.yswsReturnReason,
         yswsReturnedBy: c.yswsReturnedBy,
         customBounty: c.customBounty,
+        needsAdminReview: c.needsAdminReview,
       }
     }),
     typeCounts,
@@ -371,6 +383,7 @@ async function getList(filters: Filters) {
     from: filters.from || null,
     to: filters.to || null,
     search: filters.search || null,
+    adminReview: filters.adminReview === true ? 'true' : 'false',
   })
   return cache(key, 15, () => fetchList(filters))
 }
