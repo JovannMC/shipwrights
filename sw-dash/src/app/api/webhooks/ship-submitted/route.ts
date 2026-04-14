@@ -4,6 +4,7 @@ import { bust } from '@/lib/cache'
 import { log } from '@/lib/log'
 import { checkType } from '@/lib/typecheck'
 import { safeCompare } from '@/lib/utils'
+import { detectReshipAnomaly } from '@/lib/reship-anomaly'
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
@@ -125,26 +126,9 @@ export async function POST(request: NextRequest) {
     let previousVideoUrl: string | null = null
     let needsAdminReview = false
     if (ftType === 'reship') {
-      const [mostRecent, mostRecentWithVideo] = await Promise.all([
-        prisma.shipCert.findFirst({
-          where: { ftProjectId: String(ftProjectId) },
-          orderBy: { createdAt: 'desc' },
-          select: { status: true, yswsReturnedAt: true },
-        }),
-        prisma.shipCert.findFirst({
-          where: {
-            ftProjectId: String(ftProjectId),
-            proofVideoUrl: { not: null },
-          },
-          orderBy: { reviewCompletedAt: 'desc' },
-          select: { proofVideoUrl: true },
-        }),
-      ])
-      previousVideoUrl = mostRecentWithVideo?.proofVideoUrl ?? null
-      const wasApproved =
-        mostRecent?.status === 'approved' ||
-        (mostRecent?.status === 'pending' && mostRecent?.yswsReturnedAt !== null)
-      needsAdminReview = !mostRecent || !wasApproved
+      const detection = await detectReshipAnomaly(String(ftProjectId))
+      previousVideoUrl = detection.previousVideoUrl
+      needsAdminReview = detection.needsAdminReview
     }
 
     const cert = await prisma.shipCert.create({

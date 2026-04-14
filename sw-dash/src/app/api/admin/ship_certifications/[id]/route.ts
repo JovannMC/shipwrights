@@ -200,6 +200,7 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
       payoutMulti?: number
       projectType?: string
       customBounty?: number | null
+      needsAdminReview?: boolean
     } = {}
 
     const cert = await prisma.shipCert.findUnique({
@@ -243,6 +244,7 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
       updateData.reviewCompletedAt = new Date()
       updateData.reviewerId = user.id
       updateData.claimerId = null
+      updateData.needsAdminReview = false
 
       if (!cert.reviewStartedAt) {
         updateData.reviewStartedAt = new Date()

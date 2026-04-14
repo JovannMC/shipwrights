@@ -17,6 +17,7 @@ type StatsRow = {
   approved: bigint
   rejected: bigint
   pending: bigint
+  adminReview: bigint
   decisionsToday: bigint
   newShipsToday: bigint
   decisionsYesterday: bigint
@@ -102,6 +103,7 @@ async function fetchStats(lbMode: string) {
         SUM(status = 'approved' AND needsAdminReview = false) AS approved,
         SUM(status = 'rejected' AND needsAdminReview = false) AS rejected,
         SUM(status = 'pending' AND needsAdminReview = false) AS pending,
+        SUM(status = 'pending' AND needsAdminReview = true) AS adminReview,
         SUM(reviewCompletedAt IS NOT NULL AND reviewCompletedAt >= ${today} AND needsAdminReview = false) AS decisionsToday,
         SUM(createdAt >= ${today} AND needsAdminReview = false) AS newShipsToday,
         SUM(reviewCompletedAt IS NOT NULL AND reviewCompletedAt >= ${yesterday} AND reviewCompletedAt < ${today} AND needsAdminReview = false) AS decisionsYesterday,
@@ -156,6 +158,7 @@ async function fetchStats(lbMode: string) {
   const approved = toNum(statsRow?.approved)
   const rejected = toNum(statsRow?.rejected)
   const pending = toNum(statsRow?.pending)
+  const adminReview = toNum(statsRow?.adminReview)
   const totalJudged = approved + rejected
   const approvalRate = totalJudged > 0 ? Number(((approved / totalJudged) * 100).toFixed(1)) : 0
 
@@ -251,6 +254,7 @@ async function fetchStats(lbMode: string) {
       approved,
       rejected,
       pending,
+      adminReview,
       approvalRate,
       avgQueueTime,
       oldestInQueue,
@@ -308,6 +312,7 @@ async function fetchList(filters: Filters) {
         yswsReturnReason: true,
         yswsReturnedBy: true,
         customBounty: true,
+        needsAdminReview: true,
         reviewer: { select: { id: true, username: true, avatar: true } },
         claimer: { select: { id: true, username: true } },
       },
@@ -355,6 +360,7 @@ async function fetchList(filters: Filters) {
         yswsReturnReason: c.yswsReturnReason,
         yswsReturnedBy: c.yswsReturnedBy,
         customBounty: c.customBounty,
+        needsAdminReview: c.needsAdminReview,
       }
     }),
     typeCounts,
