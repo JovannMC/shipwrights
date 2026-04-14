@@ -458,6 +458,7 @@ export function CertsView({ initial }: Props) {
               { val: 'initial', label: 'Initial' },
               { val: 'recertification', label: 'Recertification' },
               { val: 'resend', label: 'Resend' },
+              { val: 'reship', label: 'Reship' },
             ]}
             onChange={setFtType}
           />

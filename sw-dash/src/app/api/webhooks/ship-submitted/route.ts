@@ -122,6 +122,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'duplicate ship, already in the queue!' }, { status: 403 })
     }
 
+    let previousVideoUrl: string | null = null
+    if (ftType === 'reship') {
+      const prev = await prisma.shipCert.findFirst({
+        where: {
+          ftProjectId: String(ftProjectId),
+          proofVideoUrl: { not: null },
+        },
+        orderBy: { reviewCompletedAt: 'desc' },
+        select: { proofVideoUrl: true },
+      })
+      previousVideoUrl = prev?.proofVideoUrl || null
+    }
+
     const cert = await prisma.shipCert.create({
       data: {
         ftProjectId: String(ftProjectId),
@@ -137,6 +150,7 @@ export async function POST(request: NextRequest) {
         devTime: metadata?.devTime
           ? `${Math.floor(metadata.devTime / 3600)}h ${Math.floor((metadata.devTime % 3600) / 60)}m`
           : null,
+        proofVideoUrl: previousVideoUrl,
         status: 'pending',
       },
     })
