@@ -212,6 +212,23 @@ export function Form({ shipId }: Props) {
           </div>
         </div>
 
+        {cert.ftType === 'reship' && (
+          <div className="bg-gradient-to-br from-cyan-950/60 to-cyan-900/30 border-4 border-cyan-600/60 rounded-3xl p-4 md:p-5 mb-4 md:mb-6 shadow-xl shadow-cyan-950/30">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl md:text-3xl shrink-0">🔄</span>
+              <div>
+                <h3 className="text-cyan-300 font-mono text-base md:text-lg font-bold mb-1">
+                  Reship — previously approved
+                </h3>
+                <p className="text-cyan-100/90 font-mono text-sm">
+                  This project has been approved before. It should be approved again — no
+                  rejections.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
           <div className="lg:col-span-2 space-y-4 md:space-y-6">
             <AiSummary cert={cert} />
@@ -281,6 +298,9 @@ export function Form({ shipId }: Props) {
             <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl shadow-amber-950/20">
               <h3 className="text-amber-400 font-mono text-sm font-bold mb-3 md:mb-4">
                 Proof Video
+                {cert.ftType === 'reship' && (
+                  <span className="ml-2 text-cyan-300 font-normal">(optional — reship)</span>
+                )}
               </h3>
               <div className="mb-4">
                 <label className="block mb-2">

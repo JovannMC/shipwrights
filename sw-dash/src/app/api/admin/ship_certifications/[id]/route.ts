@@ -120,6 +120,7 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
         readme: cert.readmeUrl,
       },
       status: cert.status,
+      ftType: cert.ftType,
       feedback: cert.reviewFeedback,
       proofVideo: cert.proofVideoUrl,
       reviewer: cert.reviewer

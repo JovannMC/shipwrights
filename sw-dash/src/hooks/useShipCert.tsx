@@ -167,12 +167,13 @@ export function useShipCert(shipId: string) {
         return
       }
       const videoUrl = url || cert?.proofVideo
+      const isReship = cert?.ftType === 'reship'
       if (!reason.trim()) {
         setErr('write feedback first dumbass')
         setTimeout(() => setErr(null), 3000)
         return
       }
-      if (!videoUrl) {
+      if (!videoUrl && !isReship) {
         setErr('upload proof video dipshit')
         setTimeout(() => setErr(null), 3000)
         return
