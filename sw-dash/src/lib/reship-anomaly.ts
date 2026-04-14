@@ -12,20 +12,25 @@ export async function detectReshipAnomaly(ftProjectId: string): Promise<{
   needsAdminReview: boolean
   previousVideoUrl: string | null
 }> {
-  const priors = await prisma.shipCert.findMany({
-    where: { ftProjectId },
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-    select: { status: true, yswsReturnedAt: true, proofVideoUrl: true },
-    take: 50,
-  })
+  const [mostRecent, mostRecentWithVideo] = await Promise.all([
+    prisma.shipCert.findFirst({
+      where: { ftProjectId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { status: true, yswsReturnedAt: true },
+    }),
+    prisma.shipCert.findFirst({
+      where: { ftProjectId, proofVideoUrl: { not: null } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { proofVideoUrl: true },
+    }),
+  ])
 
-  const mostRecent = priors[0]
   const wasApproved =
     mostRecent?.status === 'approved' ||
     (mostRecent?.status === 'pending' && mostRecent?.yswsReturnedAt !== null)
 
   return {
     needsAdminReview: !mostRecent || !wasApproved,
-    previousVideoUrl: priors.find((p) => p.proofVideoUrl)?.proofVideoUrl ?? null,
+    previousVideoUrl: mostRecentWithVideo?.proofVideoUrl ?? null,
   }
 }

@@ -138,7 +138,7 @@ export function CertsView({ initial, isAdmin = false }: Props) {
   const params = useSearchParams()
   const router = useRouter()
   const [ftType, setFtType] = useState(params.get('ftType') || 'all')
-  const rawStatus = params.get('status') || 'pending'
+  const rawStatus = params.get('adminReview') === 'true' ? 'admin' : params.get('status') || 'pending'
   const [status, setStatus] = useState(rawStatus === 'admin' && !isAdmin ? 'pending' : rawStatus)
   const [sortBy, setSortBy] = useState(params.get('sortBy') || 'oldest')
   const [search, setSearch] = useState(params.get('search') || '')
@@ -215,7 +215,11 @@ export function CertsView({ initial, isAdmin = false }: Props) {
     const p = new URLSearchParams()
     if (selectedTypes.length > 0) p.set('type', selectedTypes.join(','))
     if (ftType !== 'all') p.set('ftType', ftType)
-    if (status !== 'pending') p.set('status', status)
+    if (status === 'admin') {
+      p.set('adminReview', 'true')
+    } else if (status !== 'pending') {
+      p.set('status', status)
+    }
     if (sortBy !== 'oldest') p.set('sortBy', sortBy)
     if (search) p.set('search', search)
     if (from) p.set('from', from)
