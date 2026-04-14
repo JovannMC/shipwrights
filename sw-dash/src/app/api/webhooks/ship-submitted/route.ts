@@ -125,15 +125,26 @@ export async function POST(request: NextRequest) {
     let previousVideoUrl: string | null = null
     let needsAdminReview = false
     if (ftType === 'reship') {
-      const prev = await prisma.shipCert.findFirst({
-        where: { ftProjectId: String(ftProjectId) },
-        orderBy: { createdAt: 'desc' },
-        select: { proofVideoUrl: true, status: true, yswsReturnedAt: true },
-      })
-      previousVideoUrl = prev?.proofVideoUrl ?? null
+      const [mostRecent, mostRecentWithVideo] = await Promise.all([
+        prisma.shipCert.findFirst({
+          where: { ftProjectId: String(ftProjectId) },
+          orderBy: { createdAt: 'desc' },
+          select: { status: true, yswsReturnedAt: true },
+        }),
+        prisma.shipCert.findFirst({
+          where: {
+            ftProjectId: String(ftProjectId),
+            proofVideoUrl: { not: null },
+          },
+          orderBy: { reviewCompletedAt: 'desc' },
+          select: { proofVideoUrl: true },
+        }),
+      ])
+      previousVideoUrl = mostRecentWithVideo?.proofVideoUrl ?? null
       const wasApproved =
-        prev?.status === 'approved' || (prev?.status === 'pending' && prev?.yswsReturnedAt !== null)
-      needsAdminReview = !prev || !wasApproved
+        mostRecent?.status === 'approved' ||
+        (mostRecent?.status === 'pending' && mostRecent?.yswsReturnedAt !== null)
+      needsAdminReview = !mostRecent || !wasApproved
     }
 
     const cert = await prisma.shipCert.create({
