@@ -314,6 +314,40 @@ Return ONLY valid JSON with no markdown, no code blocks, no explanation:
 {{"reason": "category_key", "explanation": "Brief justification for this classification"}}"""
 
 
+def get_rejection_cert_id_from_request(req):
+    data = req.get_json(silent=True) or {}
+    cert_id = data.get("cert_id")
+
+    if cert_id is None:
+        return None
+
+    try:
+        return int(cert_id)
+    except (TypeError, ValueError):
+        return None
+
+
+def process_rejection_analysis(cert_id, fetch_cert_info, save_rejection_result):
+    logger.info(f"[rejection] looking up cert_id={cert_id!r} (type={type(cert_id).__name__})")
+    cert_data = fetch_cert_info(cert_id)
+    logger.info(f"[rejection] cert_data={cert_data!r}")
+    if cert_data is None:
+        return {"error": "cert not found"}, 404
+
+    prompt = format_rejection_analysis_prompt(
+        project_description=cert_data.get("description", ""),
+        reviewer_feedback=cert_data.get("reviewFeedback", "")
+    )
+    response = get_ai_response(content=prompt, keys=["reason", "explanation"])
+
+    if response["error"]:
+        return response, 500
+
+    ai_response = response["content"]
+    save_rejection_result(cert_id, ai_response["reason"], ai_response["explanation"])
+    return None, None
+
+
 def clean_json_response(content: str) -> str:
     content = content.strip()
     if content.startswith("```json"):

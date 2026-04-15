@@ -135,33 +135,21 @@ def get_vibes():
     VIBES_CACHE["created_at"] = datetime.now()
     return jsonify(ai_response), 200
 
-@app.get("/analysis/rejection")
-def analyze_rejection_reason():
-    data = request.json
-    cert_id = data.get("cert_id")
+@app.post("/analysis/rejection")
+def analyze_rejection_reason_post():
+    cert_id = get_rejection_cert_id_from_request(request)
+    if cert_id is None:
+        return jsonify({"error": "invalid or missing cert_id"}), 400
 
-    logger.info(f"[rejection] looking up cert_id={cert_id!r} (type={type(cert_id).__name__})")
-    cert_data = get_cert_rejection_info(cert_id)
-    logger.info(f"[rejection] cert_data={cert_data!r}")
-    if cert_data is None:
-        return jsonify({"error": "cert not found"}), 404
-
-    prompt = format_rejection_analysis_prompt(
-        project_description=cert_data.get("description", ""),
-        reviewer_feedback=cert_data.get("reviewFeedback", "")
+    error_body, error_status = process_rejection_analysis(
+        cert_id,
+        get_cert_rejection_info,
+        save_rejection_reason
     )
-    response = get_ai_response(content=prompt, keys=["reason", "explanation"])
+    if error_body is not None:
+        return jsonify(error_body), error_status
 
-    if response["error"]:
-        return jsonify(response), 500
-    ai_response = response["content"]
-
-    save_rejection_reason(cert_id, ai_response["reason"], ai_response["explanation"])
-
-    return jsonify({
-        "reason": ai_response["reason"],
-        "explanation": ai_response["explanation"],
-    }), 200
+    return "ok", 200
 
 @app.get("/projects/check")
 def check_project():
