@@ -1,6 +1,4 @@
 import { NextResponse, after } from 'next/server'
-import http from 'node:http'
-import https from 'node:https'
 import { can, PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { log } from '@/lib/log'
@@ -494,48 +492,22 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
             return
           }
 
-          const payload = JSON.stringify({ cert_id: updated.id })
-
           try {
-            const url = new URL('/analysis/rejection', swAiUrl)
-            const requestImpl = url.protocol === 'https:' ? https.request : http.request
+            const response = await fetch(`${swAiUrl}/analysis/rejection`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': process.env.SW_API_KEY ?? '',
+              },
+              body: JSON.stringify({ cert_id: updated.id }),
+            })
 
-            // Keep GET+JSON body for compatibility with current sw-ai /analysis/rejection handler.
-            const result = await new Promise<{ status: number; body: string }>(
-              (resolve, reject) => {
-                const req = requestImpl(
-                  url,
-                  {
-                    method: 'GET',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Content-Length': String(Buffer.byteLength(payload)),
-                      'X-API-Key': process.env.SW_API_KEY ?? '',
-                    },
-                  },
-                  (res) => {
-                    let body = ''
-                    res.setEncoding('utf8')
-                    res.on('data', (chunk) => {
-                      body += chunk
-                    })
-                    res.on('end', () => {
-                      resolve({ status: res.statusCode ?? 0, body })
-                    })
-                  }
-                )
-
-                req.on('error', reject)
-                req.write(payload)
-                req.end()
-              }
-            )
-
-            if (result.status < 200 || result.status >= 300) {
+            if (!response.ok) {
+              const errorBody = await response.text().catch(() => '')
               console.error('[rejection-analysis] SW-AI request failed', {
                 certId: updated.id,
-                status: result.status,
-                body: result.body.slice(0, 400),
+                status: response.status,
+                body: errorBody.slice(0, 400),
               })
             }
           } catch (err) {
