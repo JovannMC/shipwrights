@@ -159,7 +159,7 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       claimedAt: cert.reviewStartedAt?.toISOString() || null,
       canEditClaim,
       aiSummary: cert.aiSummary,
-      history: history.map((h: any) => ({
+      history: history.map((h) => ({
         id: h.id,
         verdict: h.status,
         certifier: h.reviewer?.username || 'unknown',
@@ -256,8 +256,6 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
           userId: payoutUserId,
           projectType: cert.projectType,
           customBounty: cert.customBounty,
-          certCreatedAt: cert.createdAt,
-          status: verdict.toLowerCase() as 'approved' | 'rejected',
         })
         updateData.cookiesEarned = payout.cookies
         updateData.payoutMulti = Number(payout.multi.toFixed(2))
